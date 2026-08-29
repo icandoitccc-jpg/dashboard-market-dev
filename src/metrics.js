@@ -20,8 +20,12 @@ export function allowedCompanyIds(state, { market, ownerIds } = {}) {
 
 export function computeOutbound(state, filter = {}) {
   const ids = allowedCompanyIds(state, filter)
+  const hasCompanyFilter = Boolean(
+    (filter.market && filter.market !== '全部') ||
+    (filter.ownerIds && filter.ownerIds.length),
+  )
   const out = state.activities.filter(
-    (a) => a.flow_type === 'outbound' && a.kind === 'outreach' && (!ids.size || ids.has(a.company_id)),
+    (a) => a.flow_type === 'outbound' && a.kind === 'outreach' && (!hasCompanyFilter || ids.has(a.company_id)),
   )
   let human = 0, auto = 0, bounce = 0, none = 0
   const perChannel = {}

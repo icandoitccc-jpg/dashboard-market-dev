@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Download, Globe, Users, TrendingUp, Inbox, ArrowRight, User, Radio, Database, FileCheck, MessageSquare, Activity, Zap, ChevronDown } from 'lucide-react'
 import { MARKET_OPTIONS } from '../data'
 import { computeOutbound, computeInbound, marketSummary, computeWorkers, allowedCompanyIds, LEAD_STATUS_LABELS, LEAD_STATUSES, RESULT_LABEL } from '../metrics'
@@ -6,15 +6,16 @@ import Sparkline from './Sparkline'
 import Funnel from './Funnel'
 import WorldMap from './WorldMap'
 
-function MetricCard({ icon: Icon, label, value, sub, color = 'green', onClick, active }) {
+function MetricCard({ icon: Icon, label, value, sub, color = 'green', onClick, active, controls }) {
   const clickable = Boolean(onClick)
+  const Component = clickable ? 'button' : 'div'
   return (
-    <div
+    <Component
+      type={clickable ? 'button' : undefined}
       className={`metric-card ${color} ${clickable ? 'metric-clickable' : ''} ${active ? 'active' : ''}`}
       onClick={onClick}
-      role={clickable ? 'button' : undefined}
-      tabIndex={clickable ? 0 : undefined}
-      onKeyDown={clickable ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick() } } : undefined}
+      aria-expanded={clickable ? active : undefined}
+      aria-controls={clickable ? controls : undefined}
     >
       <div className="mc-icon"><Icon size={14} /><span>{label}</span></div>
       <strong className="mc-value">{value}</strong>
@@ -25,7 +26,7 @@ function MetricCard({ icon: Icon, label, value, sub, color = 'green', onClick, a
           <ChevronDown size={11} />
         </div>
       ) : null}
-    </div>
+    </Component>
   )
 }
 function SectionHeader({ icon: Icon, title, desc, live }) {
@@ -40,39 +41,19 @@ function SectionHeader({ icon: Icon, title, desc, live }) {
 }
 function EmptyBlock({ msg }) { return <div className="empty-block">{msg}</div> }
 
-// Market → approximate map position (0-100%)
-const MARKET_MAP_POS = {
-  '美国':       { x: 18, y: 38, color: 'green' },
-  '加拿大':     { x: 20, y: 28, color: 'cyan' },
-  '澳大利亚':   { x: 78, y: 75, color: 'green' },
-  '新西兰':     { x: 84, y: 82, color: 'cyan' },
-  '英国':       { x: 46, y: 32, color: 'cyan' },
-  '德国':       { x: 50, y: 34, color: 'purple' },
-  '法国':       { x: 47, y: 36, color: 'purple' },
-  '荷兰':       { x: 48, y: 31, color: 'cyan' },
-  '西班牙':     { x: 45, y: 39, color: 'cyan' },
-  '意大利':     { x: 49, y: 39, color: 'cyan' },
-  '土耳其':     { x: 54, y: 42, color: 'cyan' },
-  '印度':       { x: 64, y: 49, color: 'cyan' },
-  '日本':       { x: 78, y: 40, color: 'cyan' },
-  '韩国':       { x: 74, y: 40, color: 'cyan' },
-  '巴西':       { x: 28, y: 66, color: 'cyan' },
-  '墨西哥':     { x: 16, y: 48, color: 'cyan' },
-  '埃及':       { x: 52, y: 47, color: 'cyan' },
-  '伊朗':       { x: 58, y: 42, color: 'cyan' },
-}
-
 export default function Overview({ state, onNavigate }) {
   const [market, setMarket] = useState('全部')
+  const [mapMode, setMapMode] = useState('outbound')
   const [expandedKpi, setExpandedKpi] = useState(null)
   const [expandedObMetric, setExpandedObMetric] = useState(null)
   const [expandedIbMetric, setExpandedIbMetric] = useState(null)
+  const inboundDetailRef = useRef(null)
   const allMarkets = useMemo(() => {
-    const used = new Set(state.prospects.map((p) => p.market).filter(Boolean))
     const list = ['全部', ...MARKET_OPTIONS]
     state.prospects.forEach((p) => { if (p.market && !list.includes(p.market)) list.push(p.market) })
+    state.inbound_leads.forEach((lead) => { if (lead.country && !list.includes(lead.country)) list.push(lead.country) })
     return list
-  }, [state.prospects])
+  }, [state.prospects, state.inbound_leads])
 
   const ob = computeOutbound(state, { market })
   const ib = computeInbound(state, { market })
@@ -102,25 +83,28 @@ export default function Overview({ state, onNavigate }) {
   const humanTouches = useMemo(() => filteredTouches.filter((a) => a.replyType === 'human'), [filteredTouches])
   const inboundLeads = useMemo(() => ib.leads, [ib])
 
-  // World map points
-  const mapPoints = useMemo(() => {
+  const outboundMapPoints = useMemo(() => {
     const counts = {}
     state.prospects.forEach((p) => {
       if (!p.market) return
       counts[p.market] = (counts[p.market] || 0) + 1
     })
     return Object.entries(counts)
-      .map(([market, count]) => {
-        const pos = MARKET_MAP_POS[market]
-        if (!pos) return null
-        return { market, count, x: pos.x, y: pos.y, color: pos.color }
-      })
-      .filter(Boolean)
+      .map(([market, count]) => ({ market, count, color: 'green' }))
       .sort((a, b) => b.count - a.count)
   }, [state.prospects])
 
-  const topMarkets = mapPoints.slice(0, 5)
-  const totalMapProspects = mapPoints.reduce((s, p) => s + p.count, 0)
+  const inboundMapPoints = useMemo(() => Object.entries(
+    state.inbound_leads.reduce((counts, lead) => {
+      if (lead.country) counts[lead.country] = (counts[lead.country] || 0) + 1
+      return counts
+    }, {}),
+  ).map(([market, count]) => ({ market, count, color: 'purple' })).sort((a, b) => b.count - a.count), [state.inbound_leads])
+
+  const mapPoints = mapMode === 'outbound' ? outboundMapPoints : inboundMapPoints
+  const topMarkets = mapPoints.slice(0, 8)
+  const totalMapRecords = mapPoints.reduce((sum, point) => sum + point.count, 0)
+  const mapMetricLabel = mapMode === 'outbound' ? '家客户档案' : '条询盘'
 
   // Sparkline data
   const sparkProspects = useMemo(() => {
@@ -177,19 +161,34 @@ export default function Overview({ state, onNavigate }) {
     return valid.slice(0, 6)
   }, [filteredTouches, inboundLeads, companyMap])
 
-  // Funnel data
-  const funnelSteps = useMemo(() => {
-    const out = ob.total
-    const signals = ob.human + ob.auto
-    const engaged = ob.human
-    const inquiries = totalInbound
+  const outboundFunnelSteps = useMemo(() => {
     return [
-      { label: '触达动作', sub: 'Outreach', count: out },
-      { label: '信号回复', sub: '真人 + 自动', count: signals, prev: out },
-      { label: '有效沟通', sub: '仅真人回复', count: engaged, prev: signals },
-      { label: '询盘机会', sub: 'Inbound 询盘', count: inquiries, prev: engaged },
+      { label: '客户档案', sub: '当前筛选范围', count: totalProspects },
+      { label: '已触达客户', sub: '至少一次主动触达', count: ob.touchedCompanies, prev: totalProspects },
+      { label: '真人回复客户', sub: '获得过真人回应', count: ob.humanCompanies, prev: ob.touchedCompanies },
     ]
-  }, [ob, totalInbound])
+  }, [ob, totalProspects])
+
+  const inboundFunnelSteps = useMemo(() => {
+    const active = (ib.counts.Learning || 0) + (ib.counts.Qualified || 0) + (ib.counts.Converted || 0)
+    const qualified = (ib.counts.Qualified || 0) + (ib.counts.Converted || 0)
+    const converted = ib.counts.Converted || 0
+    return [
+      { label: '收到询盘', sub: '所有 Inbound 线索', count: ib.total },
+      { label: '进入沟通', sub: '了解中及以后', count: active, prev: ib.total },
+      { label: '确认意向', sub: '已确认意向及以后', count: qualified, prev: active },
+      { label: '完成转化', sub: '当前已转化', count: converted, prev: qualified },
+    ]
+  }, [ib])
+
+  useEffect(() => {
+    if (!expandedIbMetric || !inboundDetailRef.current) return
+    inboundDetailRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+  }, [expandedIbMetric])
+
+  const toggleInboundMetric = (metric) => {
+    setExpandedIbMetric((current) => (current === metric ? null : metric))
+  }
 
   // Robust time formatter — always returns readable output
   const fmtTime = (iso) => {
@@ -263,6 +262,7 @@ export default function Overview({ state, onNavigate }) {
 
   // Helper: render detail panel for inbound metric expansion
   const renderIbDetail = (status) => {
+    if (!status) return null
     const title = status === 'all' ? '全部询盘明细' : (LEAD_STATUS_LABELS[status] || '询盘')
     const leads = status === 'all' ? ib.leads : ib.leads.filter(l => l.inbound_status === status)
     if (!leads.length) {
@@ -340,7 +340,7 @@ export default function Overview({ state, onNavigate }) {
           <Sparkline data={sparkProspects} color="green" />
           <div className="kpi-foot">
             <span>{market === '全部' ? '全部市场' : market}</span>
-            <span className="delta-pill">+{mapPoints.length} 个市场</span>
+            <span className="delta-pill">+{outboundMapPoints.length} 个市场</span>
           </div>
         </div>
 
@@ -449,6 +449,55 @@ export default function Overview({ state, onNavigate }) {
         </div>
       )}
 
+      {/* ═══ Global market view: Outbound and Inbound share geography, not metrics ═══ */}
+      <section className="dash-section global-market-section">
+        <div className="global-market-header">
+          <SectionHeader icon={Globe} title="全球市场分布" desc="地图与全盘市场筛选联动；Outbound 客户档案与 Inbound 询盘分开查看" />
+          <div className="map-mode-tabs" role="tablist" aria-label="切换地图数据">
+            <button type="button" role="tab" aria-selected={mapMode === 'outbound'} className={mapMode === 'outbound' ? 'active' : ''} onClick={() => setMapMode('outbound')}>
+              Outbound 客户
+            </button>
+            <button type="button" role="tab" aria-selected={mapMode === 'inbound'} className={mapMode === 'inbound' ? 'active' : ''} onClick={() => setMapMode('inbound')}>
+              Inbound 询盘
+            </button>
+          </div>
+        </div>
+        <div className="intel-panel global-map-grid">
+          <WorldMap
+            points={mapPoints}
+            metricLabel={mapMetricLabel}
+            activeMarket={market !== '全部' ? market : null}
+            onSelectMarket={(selectedMarket) => setMarket(market === selectedMarket ? '全部' : selectedMarket)}
+          />
+          <div className="global-market-ranking">
+            <div className="ranking-heading">
+              <div>
+                <h3>{mapMode === 'outbound' ? 'Outbound 市场' : 'Inbound 来源市场'}</h3>
+                <p>{mapMode === 'outbound' ? '按客户档案数量排列' : '按主动询盘数量排列'}</p>
+              </div>
+              <strong>{totalMapRecords}</strong>
+            </div>
+            <div className="top-markets">
+              {topMarkets.map((point) => (
+                <button
+                  type="button"
+                  className={`top-market-row ${market === point.market ? 'selected' : ''}`}
+                  key={point.market}
+                  onClick={() => setMarket(market === point.market ? '全部' : point.market)}
+                >
+                  <span className={`dot ${point.color}`} />
+                  <strong>{point.market}</strong>
+                  <span className="cnt">{point.count}</span>
+                  <div className="top-market-bar"><i style={{ width: `${totalMapRecords ? (point.count / totalMapRecords) * 100 : 0}%` }} /></div>
+                  <span className="pct">{totalMapRecords ? ((point.count / totalMapRecords) * 100).toFixed(1) : '0.0'}%</span>
+                </button>
+              ))}
+            </div>
+            <p className="map-filter-note">当前全盘筛选：<strong>{market}</strong>。点击同一市场可取消筛选。</p>
+          </div>
+        </div>
+      </section>
+
       {/* ═══ OUTBOUND Intelligence Panel ═══ */}
       <section className="dash-section">
         <SectionHeader icon={Zap} title="Outbound 开发情况" desc="主动触达路径验证：从客户发现到真人回复的全链路数据" live />
@@ -477,7 +526,7 @@ export default function Overview({ state, onNavigate }) {
 
           {ob.total > 0 ? (
             <>
-              <div className="intel-grid-main">
+              <div className="channel-performance-layout">
                 <div className="panel" style={{ maxWidth: 'none' }}>
                   <h3>渠道表现 <small>按真人回复率排序</small></h3>
                   <div className="ch-perf-list">
@@ -496,48 +545,31 @@ export default function Overview({ state, onNavigate }) {
                     ))}
                   </div>
                 </div>
-                <div className="panel" style={{ maxWidth: 'none' }}>
-                  <h3>市场分布 <small>点击地图光点或下方市场名，切换全局筛选</small></h3>
-                  <WorldMap
-                    points={mapPoints}
-                    activeMarket={market !== '全部' ? market : null}
-                    onSelectMarket={(m) => setMarket(market === m ? '全部' : m)}
-                  />
-                  <div className="top-markets">
-                    {topMarkets.map((p) => (
-                      <button
-                        type="button"
-                        className={`top-market-row ${market === p.market ? 'selected' : ''}`}
-                        key={p.market}
-                        onClick={() => setMarket(market === p.market ? '全部' : p.market)}
-                        title={`点击筛选「${p.market}」（再点一次取消）`}
-                      >
-                        <span className={`dot ${p.color}`} />
-                        <strong>{p.market}</strong>
-                        <span className="cnt">{p.count}</span>
-                        <div className="top-market-bar"><i style={{ width: `${(p.count / totalMapProspects) * 100}%` }} /></div>
-                        <span className="pct">{((p.count / totalMapProspects) * 100).toFixed(1)}%</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
               </div>
             </>
           ) : <EmptyBlock msg="还没有 Outbound 触达记录。" />}
         </div>
       </section>
 
-      {/* ═══ Conversion Funnel + Recent Activity ═══ */}
-      <div className="intel-grid-secondary">
+      {/* ═══ Separate funnels: these are different acquisition routes ═══ */}
+      <div className="intel-grid-funnels">
         <div className="panel">
-          <h3>整体转化漏斗 <small>从触达到询盘机会</small></h3>
-          <Funnel steps={funnelSteps} total={funnelSteps[0]?.count || 0} />
+          <h3>Outbound 回应漏斗 <small>同一批主动开发客户</small></h3>
+          <Funnel steps={outboundFunnelSteps} total={outboundFunnelSteps[0]?.count || 0} accent="outbound" />
           <div className="funnel-summary">
             <span className="label">真人回复转化率（触达 → 真人）</span>
             <span className="value">{ob.humanReplyRate}</span>
           </div>
         </div>
         <div className="panel">
+          <h3>Inbound 处理漏斗 <small>当前询盘处理进展</small></h3>
+          <Funnel steps={inboundFunnelSteps} total={inboundFunnelSteps[0]?.count || 0} accent="inbound" />
+          <div className="funnel-summary purple">
+            <span className="label">已确认意向</span>
+            <span className="value">{ib.counts.Qualified || 0}</span>
+          </div>
+        </div>
+        <div className="panel recent-panel">
           <h3>最近动态 <small>最新操作记录</small></h3>
           {recentActivities.length === 0 ? (
             <EmptyBlock msg="还没有活动数据" />
@@ -586,17 +618,21 @@ export default function Overview({ state, onNavigate }) {
           <div className="metrics-row">
             <MetricCard icon={Inbox} label="总询盘" value={ib.total} sub="条" color="blue"
               active={expandedIbMetric === 'all'}
-              onClick={() => setExpandedIbMetric(expandedIbMetric === 'all' ? null : 'all')} />
+              controls="inbound-metric-detail"
+              onClick={() => toggleInboundMetric('all')} />
             {LEAD_STATUSES.slice(0, 5).map((s) => (
               <MetricCard key={s} icon={FileCheck} label={LEAD_STATUS_LABELS[s]} value={ib.counts[s]} sub="条"
                 color={s === 'Converted' ? 'green' : s === 'Lost' ? 'red' : s === 'Qualified' ? 'green' : 'default'}
                 active={expandedIbMetric === s}
-                onClick={() => setExpandedIbMetric(expandedIbMetric === s ? null : s)} />
+                controls="inbound-metric-detail"
+                onClick={() => toggleInboundMetric(s)} />
             ))}
           </div>
 
           {/* Inbound metric detail panel */}
-          {renderIbDetail(expandedIbMetric)}
+          <div id="inbound-metric-detail" ref={inboundDetailRef} className="metric-detail-slot" aria-live="polite">
+            {expandedIbMetric ? renderIbDetail(expandedIbMetric) : null}
+          </div>
 
           {ib.total > 0 ? (
             <div className="dash-grid-2">

@@ -51,7 +51,14 @@ export default function App() {
           })}
         </nav>
         <div className="topbar-user">
-          <button type="button" className="button outline compact" onClick={() => setView(`worker:${currentUser}:daily`)}>
+          <button
+            type="button"
+            className="button outline compact"
+            onClick={() => {
+              const worker = state.workers.find((w) => w.name === currentUser)
+              if (worker) setView(`worker:${worker.id}:daily`)
+            }}
+          >
             <Clock size={14} />记录今天
           </button>
           <span className="avatar">{currentUser.slice(0, 1)}</span>

@@ -36,6 +36,41 @@ function normalize(state) {
     if (!round.flow_type) round.flow_type = 'outbound'
   })
 
+  // Historical imports used 2026-01-01 as a placeholder when the source cell
+  // had no usable date. Never show that invented date. For outreach events we
+  // can safely recover the first-contact date from the same customer record;
+  // otherwise the date remains blank until a user records it.
+  const placeholderDates = new Set(['2026-01-01', '2026-01-01T00:00:00'])
+  const knownDateCorrections = new Map([['c_049', '2026-08-27'], ['c_051', '2026-08-27']])
+  const isInvalidImportedDate = (value) => placeholderDates.has(value) || (
+    typeof value === 'string' && /^2026-/.test(value) && Number.isNaN(new Date(value).getTime())
+  )
+  const prospectById = new Map(state.prospects.map((prospect) => [prospect.id, prospect]))
+  state.prospects.forEach((prospect) => {
+    const corrected = knownDateCorrections.get(prospect.id) || ''
+    if (isInvalidImportedDate(prospect.first_contact) || (!prospect.first_contact && corrected)) prospect.first_contact = corrected
+    if (isInvalidImportedDate(prospect.last_sent)) prospect.last_sent = corrected
+    prospect.channels.forEach((channel) => {
+      if (placeholderDates.has(channel.discoveredAt)) channel.discoveredAt = ''
+    })
+  })
+  state.contacts.forEach((contact) => {
+    if (placeholderDates.has(contact.created_at)) contact.created_at = ''
+  })
+  state.activities.forEach((activity) => {
+    const firstContact = prospectById.get(activity.company_id)?.first_contact
+    const recoverableSeedDate = !activity.at && activity.id?.endsWith('_seed') && firstContact
+    if (!isInvalidImportedDate(activity.at) && !recoverableSeedDate) return
+    activity.at = firstContact ? `${firstContact}T00:00:00` : ''
+  })
+  state.follow_up_tasks.forEach((task) => {
+    if (placeholderDates.has(task.created_at)) task.created_at = ''
+  })
+  state.inbound_leads.forEach((lead) => {
+    if (placeholderDates.has(lead.received_at)) lead.received_at = ''
+    if (placeholderDates.has(lead.assigned_at)) lead.assigned_at = ''
+  })
+
   return state
 }
 

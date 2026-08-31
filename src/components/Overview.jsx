@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Download, Globe, Users, TrendingUp, Inbox, ArrowRight, User, Radio, Database, FileCheck, MessageSquare, Activity, Zap, ChevronDown } from 'lucide-react'
 import { MARKET_OPTIONS } from '../data'
-import { computeOutbound, computeInbound, marketSummary, computeWorkers, allowedCompanyIds, LEAD_STATUS_LABELS, LEAD_STATUSES, RESULT_LABEL } from '../metrics'
+import { computeOutbound, computeInbound, marketSummary, computeWorkers, computeRuleInsights, allowedCompanyIds, LEAD_STATUS_LABELS, LEAD_STATUSES, RESULT_LABEL } from '../metrics'
 import Sparkline from './Sparkline'
 import Funnel from './Funnel'
 import WorldMap from './WorldMap'
+import RuleInsights from './RuleInsights'
 
 function MetricCard({ icon: Icon, label, value, sub, color = 'green', onClick, active, controls }) {
   const clickable = Boolean(onClick)
@@ -43,7 +44,7 @@ function EmptyBlock({ msg }) { return <div className="empty-block">{msg}</div> }
 
 export default function Overview({ state, onNavigate }) {
   const [market, setMarket] = useState('全部')
-  const [mapMode, setMapMode] = useState('outbound')
+  const [mapMode, setMapMode] = useState('all')
   const [expandedKpi, setExpandedKpi] = useState(null)
   const [expandedObMetric, setExpandedObMetric] = useState(null)
   const [expandedIbMetric, setExpandedIbMetric] = useState(null)
@@ -59,6 +60,7 @@ export default function Overview({ state, onNavigate }) {
   const ib = computeInbound(state, { market })
   const ms = marketSummary(state)
   const team = computeWorkers(state)
+  const analysis = useMemo(() => computeRuleInsights(state, { market, flow: mapMode }), [state, market, mapMode])
 
   const ids = allowedCompanyIds(state, { market })
   const totalProspects = state.prospects.filter((p) => ids.has(p.id)).length
@@ -101,10 +103,28 @@ export default function Overview({ state, onNavigate }) {
     }, {}),
   ).map(([market, count]) => ({ market, count, color: 'purple' })).sort((a, b) => b.count - a.count), [state.inbound_leads])
 
-  const mapPoints = mapMode === 'outbound' ? outboundMapPoints : inboundMapPoints
+  const combinedMapPoints = useMemo(() => {
+    const combined = {}
+    outboundMapPoints.forEach(({ market, count }) => {
+      combined[market] = { market, outboundCount: count, inboundCount: 0 }
+    })
+    inboundMapPoints.forEach(({ market, count }) => {
+      if (!combined[market]) combined[market] = { market, outboundCount: 0, inboundCount: 0 }
+      combined[market].inboundCount = count
+    })
+    return Object.values(combined)
+      .map((point) => ({ ...point, count: point.outboundCount + point.inboundCount, color: 'cyan' }))
+      .sort((a, b) => b.count - a.count)
+  }, [outboundMapPoints, inboundMapPoints])
+
+  const mapPoints = mapMode === 'all'
+    ? combinedMapPoints
+    : mapMode === 'outbound' ? outboundMapPoints : inboundMapPoints
   const topMarkets = mapPoints.slice(0, 8)
   const totalMapRecords = mapPoints.reduce((sum, point) => sum + point.count, 0)
-  const mapMetricLabel = mapMode === 'outbound' ? '家客户档案' : '条询盘'
+  const mapMetricLabel = mapMode === 'all' ? '条路径记录' : mapMode === 'outbound' ? '家客户档案' : '条询盘'
+  const mapHeading = mapMode === 'all' ? '全部路径市场' : mapMode === 'outbound' ? 'Outbound 市场' : 'Inbound 来源市场'
+  const mapDescription = mapMode === 'all' ? 'Outbound 客户与 Inbound 询盘合并排列' : mapMode === 'outbound' ? '按客户档案数量排列' : '按主动询盘数量排列'
 
   // Sparkline data
   const sparkProspects = useMemo(() => {
@@ -150,8 +170,8 @@ export default function Overview({ state, onNavigate }) {
       })
     })
     // Only keep entries with a parseable date, newest first.
-    // (a few legacy Excel rows carry malformed dates like "2026-15-53" — they must not
-    //  pollute the feed, per the traceability rule: every number maps to a real record)
+    // Malformed legacy import dates must not pollute the feed: every displayed
+    // number and date must map to a real record.
     const valid = items.filter((it) => {
       if (!it.at) return false
       const t = new Date(it.at).getTime()
@@ -449,17 +469,23 @@ export default function Overview({ state, onNavigate }) {
         </div>
       )}
 
-      {/* ═══ Global market view: Outbound and Inbound share geography, not metrics ═══ */}
+      {/* ═══ Global market view: default to the whole acquisition picture ═══ */}
       <section className="dash-section global-market-section">
         <div className="global-market-header">
-          <SectionHeader icon={Globe} title="全球市场分布" desc="地图与全盘市场筛选联动；Outbound 客户档案与 Inbound 询盘分开查看" />
-          <div className="map-mode-tabs" role="tablist" aria-label="切换地图数据">
+          <SectionHeader icon={Globe} title="全球路径分布" desc="默认展示全部客户获取路径；可分别查看 Outbound 客户与 Inbound 询盘" />
+          <div className="map-mode-control">
+            <span className="map-mode-label">地图视角</span>
+            <div className={`map-mode-tabs mode-${mapMode}`} role="tablist" aria-label="切换地图数据">
+            <button type="button" role="tab" aria-selected={mapMode === 'all'} className={mapMode === 'all' ? 'active' : ''} onClick={() => setMapMode('all')}>
+              <span className="mode-dot all" />全部路径
+            </button>
             <button type="button" role="tab" aria-selected={mapMode === 'outbound'} className={mapMode === 'outbound' ? 'active' : ''} onClick={() => setMapMode('outbound')}>
-              Outbound 客户
+              <span className="mode-dot outbound" />Outbound 客户
             </button>
             <button type="button" role="tab" aria-selected={mapMode === 'inbound'} className={mapMode === 'inbound' ? 'active' : ''} onClick={() => setMapMode('inbound')}>
-              Inbound 询盘
+              <span className="mode-dot inbound" />Inbound 询盘
             </button>
+            </div>
           </div>
         </div>
         <div className="intel-panel global-map-grid">
@@ -472,8 +498,8 @@ export default function Overview({ state, onNavigate }) {
           <div className="global-market-ranking">
             <div className="ranking-heading">
               <div>
-                <h3>{mapMode === 'outbound' ? 'Outbound 市场' : 'Inbound 来源市场'}</h3>
-                <p>{mapMode === 'outbound' ? '按客户档案数量排列' : '按主动询盘数量排列'}</p>
+                <h3>{mapHeading}</h3>
+                <p>{mapDescription}</p>
               </div>
               <strong>{totalMapRecords}</strong>
             </div>
@@ -486,7 +512,12 @@ export default function Overview({ state, onNavigate }) {
                   onClick={() => setMarket(market === point.market ? '全部' : point.market)}
                 >
                   <span className={`dot ${point.color}`} />
-                  <strong>{point.market}</strong>
+                  <span className="market-name-wrap">
+                    <strong>{point.market}</strong>
+                    {mapMode === 'all' ? (
+                      <small><i className="path-dot outbound" />O {point.outboundCount}<i className="path-dot inbound" />I {point.inboundCount}</small>
+                    ) : null}
+                  </span>
                   <span className="cnt">{point.count}</span>
                   <div className="top-market-bar"><i style={{ width: `${totalMapRecords ? (point.count / totalMapRecords) * 100 : 0}%` }} /></div>
                   <span className="pct">{totalMapRecords ? ((point.count / totalMapRecords) * 100).toFixed(1) : '0.0'}%</span>
@@ -496,7 +527,57 @@ export default function Overview({ state, onNavigate }) {
             <p className="map-filter-note">当前全盘筛选：<strong>{market}</strong>。点击同一市场可取消筛选。</p>
           </div>
         </div>
+        {market === '全部' ? (
+          <div className="market-detail-empty">
+            <Globe size={16} />点击地图标记或右侧市场名称，查看该市场的客户与询盘明细。
+          </div>
+        ) : (
+          <div className="market-detail-panel">
+            <div className="market-detail-head">
+              <div><span>当前市场</span><h3>{market}</h3></div>
+              <button type="button" className="close-btn" onClick={() => setMarket('全部')}>清除市场筛选</button>
+            </div>
+            <div className={`market-detail-columns ${mapMode !== 'all' ? 'single' : ''}`}>
+              {mapMode !== 'inbound' ? (
+                <div className="market-path-detail outbound">
+                  <div className="market-path-detail-head"><h4>Outbound 客户</h4><strong>{filteredProspects.length}</strong></div>
+                  {filteredProspects.length ? (
+                    <div className="market-record-list">
+                      {filteredProspects.map((prospect) => (
+                        <div className="market-record" key={prospect.id}>
+                          <div><strong>{prospect.name}</strong><small>{prospect.sourceMethod || prospect.source || '未记录发现方式'}</small></div>
+                          <span>{prospect.channel || '未记录渠道'}</span>
+                          <span>{prospect.status || '未记录结果'}</span>
+                          <span>{prospect.owner || '未分配'}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : <EmptyBlock msg="该市场没有 Outbound 客户记录。" />}
+                </div>
+              ) : null}
+              {mapMode !== 'outbound' ? (
+                <div className="market-path-detail inbound">
+                  <div className="market-path-detail-head"><h4>Inbound 询盘</h4><strong>{inboundLeads.length}</strong></div>
+                  {inboundLeads.length ? (
+                    <div className="market-record-list">
+                      {inboundLeads.map((lead) => (
+                        <div className="market-record" key={lead.id}>
+                          <div><strong>{lead.company_handle || lead.company || lead.id}</strong><small>{lead.source_platform || '未记录来源平台'}</small></div>
+                          <span>{LEAD_STATUS_LABELS[lead.inbound_status] || lead.inbound_status || '未记录状态'}</span>
+                          <span>{lead.next_action || '未填写下一步'}</span>
+                          <span>{lead.lead_owner || '未分配'}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : <EmptyBlock msg="该市场没有 Inbound 询盘记录。" />}
+                </div>
+              ) : null}
+            </div>
+          </div>
+        )}
       </section>
+
+      <RuleInsights analysis={analysis} />
 
       {/* ═══ OUTBOUND Intelligence Panel ═══ */}
       <section className="dash-section">

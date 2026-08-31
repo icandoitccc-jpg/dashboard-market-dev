@@ -623,7 +623,7 @@ export const SEED_STATE = {
    "website": "https://www.anacondastores.com",
    "quoted": false,
    "sampled": false,
-   "first_contact": null,
+   "first_contact": "2026-08-26",
    "channel": "Facebook、邮件",
    "touch_count": 2,
    "batch": "",
@@ -642,14 +642,14 @@ export const SEED_STATE = {
      "key": "ch_seed_c_038_0",
      "name": "Facebook",
      "available": "yes",
-     "discoveredAt": "2026-01-01",
+     "discoveredAt": "",
      "touchCount": 2
     },
     {
      "key": "ch_seed_c_038_1",
      "name": "Email",
      "available": "yes",
-     "discoveredAt": "2026-01-01",
+     "discoveredAt": "",
      "touchCount": 2
     }
    ],
@@ -692,14 +692,14 @@ export const SEED_STATE = {
      "key": "ch_seed_c_039_0",
      "name": "Facebook",
      "available": "yes",
-     "discoveredAt": "2026-01-01",
+     "discoveredAt": "",
      "touchCount": 2
     },
     {
      "key": "ch_seed_c_039_1",
      "name": "Email",
      "available": "yes",
-     "discoveredAt": "2026-01-01",
+     "discoveredAt": "",
      "touchCount": 2
     }
    ],
@@ -742,14 +742,14 @@ export const SEED_STATE = {
      "key": "ch_seed_c_040_0",
      "name": "Instagram",
      "available": "yes",
-     "discoveredAt": "2026-01-01",
+     "discoveredAt": "",
      "touchCount": 2
     },
     {
      "key": "ch_seed_c_040_1",
      "name": "Email",
      "available": "yes",
-     "discoveredAt": "2026-01-01",
+     "discoveredAt": "",
      "touchCount": 2
     }
    ],
@@ -791,7 +791,7 @@ export const SEED_STATE = {
      "key": "ch_seed_c_041_0",
      "name": "Instagram",
      "available": "yes",
-     "discoveredAt": "2026-01-01",
+     "discoveredAt": "",
      "touchCount": 1
     }
    ],
@@ -833,7 +833,7 @@ export const SEED_STATE = {
      "key": "ch_seed_c_042_0",
      "name": "Instagram",
      "available": "yes",
-     "discoveredAt": "2026-01-01",
+     "discoveredAt": "",
      "touchCount": 1
     }
    ],
@@ -875,7 +875,7 @@ export const SEED_STATE = {
      "key": "ch_seed_c_043_0",
      "name": "Instagram",
      "available": "yes",
-     "discoveredAt": "2026-01-01",
+     "discoveredAt": "",
      "touchCount": 2
     }
    ],
@@ -917,7 +917,7 @@ export const SEED_STATE = {
      "key": "ch_seed_c_044_0",
      "name": "Instagram",
      "available": "yes",
-     "discoveredAt": "2026-01-01",
+     "discoveredAt": "",
      "touchCount": 1
     }
    ],
@@ -959,14 +959,14 @@ export const SEED_STATE = {
      "key": "ch_seed_c_045_0",
      "name": "Instagram",
      "available": "yes",
-     "discoveredAt": "2026-01-01",
+     "discoveredAt": "",
      "touchCount": 1
     },
     {
      "key": "ch_seed_c_045_1",
      "name": "Website",
      "available": "yes",
-     "discoveredAt": "2026-01-01",
+     "discoveredAt": "",
      "touchCount": 1
     }
    ],
@@ -1008,7 +1008,7 @@ export const SEED_STATE = {
      "key": "ch_seed_c_046_0",
      "name": "Email",
      "available": "yes",
-     "discoveredAt": "2026-01-01",
+     "discoveredAt": "",
      "touchCount": 1
     }
    ],
@@ -1051,7 +1051,7 @@ export const SEED_STATE = {
      "key": "ch_seed_c_047_0",
      "name": "Email",
      "available": "yes",
-     "discoveredAt": "2026-01-01",
+     "discoveredAt": "",
      "touchCount": 1
     }
    ],
@@ -1094,14 +1094,14 @@ export const SEED_STATE = {
      "key": "ch_seed_c_048_0",
      "name": "Instagram",
      "available": "yes",
-     "discoveredAt": "2026-01-01",
+     "discoveredAt": "",
      "touchCount": 2
     },
     {
      "key": "ch_seed_c_048_1",
      "name": "Email",
      "available": "yes",
-     "discoveredAt": "2026-01-01",
+     "discoveredAt": "",
      "touchCount": 2
     }
    ],
@@ -1124,11 +1124,11 @@ export const SEED_STATE = {
    "website": "",
    "quoted": false,
    "sampled": false,
-   "first_contact": null,
+   "first_contact": "2026-08-27",
    "channel": "Facebook、ins、邮件",
    "touch_count": 2,
    "batch": "",
-   "last_sent": "2026-15-53",
+   "last_sent": "2026-08-27",
    "remark": "",
    "customerType": [
     "自己的品牌"
@@ -1143,21 +1143,21 @@ export const SEED_STATE = {
      "key": "ch_seed_c_049_0",
      "name": "Facebook",
      "available": "yes",
-     "discoveredAt": "2026-01-01",
+     "discoveredAt": "",
      "touchCount": 2
     },
     {
      "key": "ch_seed_c_049_1",
      "name": "Instagram",
      "available": "yes",
-     "discoveredAt": "2026-01-01",
+     "discoveredAt": "",
      "touchCount": 2
     },
     {
      "key": "ch_seed_c_049_2",
      "name": "Email",
      "available": "yes",
-     "discoveredAt": "2026-01-01",
+     "discoveredAt": "",
      "touchCount": 2
     }
    ],
@@ -1180,7 +1180,7 @@ export const SEED_STATE = {
    "website": "",
    "quoted": false,
    "sampled": false,
-   "first_contact": null,
+   "first_contact": "2026-08-27",
    "channel": "Facebook、邮件",
    "touch_count": 2,
    "batch": "",
@@ -1199,14 +1199,14 @@ export const SEED_STATE = {
      "key": "ch_seed_c_050_0",
      "name": "Facebook",
      "available": "yes",
-     "discoveredAt": "2026-01-01",
+     "discoveredAt": "",
      "touchCount": 2
     },
     {
      "key": "ch_seed_c_050_1",
      "name": "Email",
      "available": "yes",
-     "discoveredAt": "2026-01-01",
+     "discoveredAt": "",
      "touchCount": 2
     }
    ],
@@ -1229,11 +1229,11 @@ export const SEED_STATE = {
    "website": "https://compleatangler.com.au/pages/camping-world",
    "quoted": false,
    "sampled": false,
-   "first_contact": null,
+   "first_contact": "2026-08-27",
    "channel": "邮箱",
    "touch_count": 1,
    "batch": "",
-   "last_sent": "2026-16-15",
+   "last_sent": "2026-08-27",
    "remark": "",
    "customerType": [
     "独立零售店（大众",
@@ -1249,7 +1249,7 @@ export const SEED_STATE = {
      "key": "ch_seed_c_051_0",
      "name": "Email",
      "available": "yes",
-     "discoveredAt": "2026-01-01",
+     "discoveredAt": "",
      "touchCount": 1
     }
    ],
@@ -1294,14 +1294,14 @@ export const SEED_STATE = {
      "key": "ch_seed_c_052_0",
      "name": "Facebook",
      "available": "yes",
-     "discoveredAt": "2026-01-01",
+     "discoveredAt": "",
      "touchCount": 2
     },
     {
      "key": "ch_seed_c_052_1",
      "name": "Email",
      "available": "yes",
-     "discoveredAt": "2026-01-01",
+     "discoveredAt": "",
      "touchCount": 2
     }
    ],
@@ -1345,14 +1345,14 @@ export const SEED_STATE = {
      "key": "ch_seed_c_053_0",
      "name": "Facebook",
      "available": "yes",
-     "discoveredAt": "2026-01-01",
+     "discoveredAt": "",
      "touchCount": 2
     },
     {
      "key": "ch_seed_c_053_1",
      "name": "Email",
      "available": "yes",
-     "discoveredAt": "2026-01-01",
+     "discoveredAt": "",
      "touchCount": 2
     }
    ],
@@ -1394,14 +1394,14 @@ export const SEED_STATE = {
      "key": "ch_seed_c_054_0",
      "name": "Facebook",
      "available": "yes",
-     "discoveredAt": "2026-01-01",
+     "discoveredAt": "",
      "touchCount": 2
     },
     {
      "key": "ch_seed_c_054_1",
      "name": "Email",
      "available": "yes",
-     "discoveredAt": "2026-01-01",
+     "discoveredAt": "",
      "touchCount": 2
     }
    ],
@@ -1444,21 +1444,21 @@ export const SEED_STATE = {
      "key": "ch_seed_c_055_0",
      "name": "Facebook",
      "available": "yes",
-     "discoveredAt": "2026-01-01",
+     "discoveredAt": "",
      "touchCount": 3
     },
     {
      "key": "ch_seed_c_055_1",
      "name": "Instagram",
      "available": "yes",
-     "discoveredAt": "2026-01-01",
+     "discoveredAt": "",
      "touchCount": 3
     },
     {
      "key": "ch_seed_c_055_2",
      "name": "Email",
      "available": "yes",
-     "discoveredAt": "2026-01-01",
+     "discoveredAt": "",
      "touchCount": 3
     }
    ],
@@ -1501,21 +1501,21 @@ export const SEED_STATE = {
      "key": "ch_seed_c_056_0",
      "name": "Facebook",
      "available": "yes",
-     "discoveredAt": "2026-01-01",
+     "discoveredAt": "",
      "touchCount": 3
     },
     {
      "key": "ch_seed_c_056_1",
      "name": "Instagram",
      "available": "yes",
-     "discoveredAt": "2026-01-01",
+     "discoveredAt": "",
      "touchCount": 3
     },
     {
      "key": "ch_seed_c_056_2",
      "name": "Email",
      "available": "yes",
-     "discoveredAt": "2026-01-01",
+     "discoveredAt": "",
      "touchCount": 3
     }
    ],
@@ -1559,21 +1559,21 @@ export const SEED_STATE = {
      "key": "ch_seed_c_057_0",
      "name": "Facebook",
      "available": "yes",
-     "discoveredAt": "2026-01-01",
+     "discoveredAt": "",
      "touchCount": 3
     },
     {
      "key": "ch_seed_c_057_1",
      "name": "Instagram",
      "available": "yes",
-     "discoveredAt": "2026-01-01",
+     "discoveredAt": "",
      "touchCount": 3
     },
     {
      "key": "ch_seed_c_057_2",
      "name": "Email",
      "available": "yes",
-     "discoveredAt": "2026-01-01",
+     "discoveredAt": "",
      "touchCount": 3
     }
    ],
@@ -1618,21 +1618,21 @@ export const SEED_STATE = {
      "key": "ch_seed_c_058_0",
      "name": "Facebook",
      "available": "yes",
-     "discoveredAt": "2026-01-01",
+     "discoveredAt": "",
      "touchCount": 3
     },
     {
      "key": "ch_seed_c_058_1",
      "name": "Instagram",
      "available": "yes",
-     "discoveredAt": "2026-01-01",
+     "discoveredAt": "",
      "touchCount": 3
     },
     {
      "key": "ch_seed_c_058_2",
      "name": "Email",
      "available": "yes",
-     "discoveredAt": "2026-01-01",
+     "discoveredAt": "",
      "touchCount": 3
     }
    ],
@@ -1676,14 +1676,14 @@ export const SEED_STATE = {
      "key": "ch_seed_c_059_0",
      "name": "Facebook",
      "available": "yes",
-     "discoveredAt": "2026-01-01",
+     "discoveredAt": "",
      "touchCount": 2
     },
     {
      "key": "ch_seed_c_059_1",
      "name": "Email",
      "available": "yes",
-     "discoveredAt": "2026-01-01",
+     "discoveredAt": "",
      "touchCount": 2
     }
    ],
@@ -1704,7 +1704,7 @@ export const SEED_STATE = {
    "social": "",
    "level": "Unknown",
    "acquisition_method": "",
-   "created_at": "2026-01-01"
+   "created_at": ""
   },
   {
    "id": "ct_002",
@@ -1716,7 +1716,7 @@ export const SEED_STATE = {
    "social": "",
    "level": "Unknown",
    "acquisition_method": "",
-   "created_at": "2026-01-01"
+   "created_at": ""
   },
   {
    "id": "ct_003",
@@ -1728,7 +1728,7 @@ export const SEED_STATE = {
    "social": "",
    "level": "Unknown",
    "acquisition_method": "",
-   "created_at": "2026-01-01"
+   "created_at": ""
   },
   {
    "id": "ct_004",
@@ -1740,7 +1740,7 @@ export const SEED_STATE = {
    "social": "",
    "level": "Unknown",
    "acquisition_method": "",
-   "created_at": "2026-01-01"
+   "created_at": ""
   },
   {
    "id": "ct_005",
@@ -1752,7 +1752,7 @@ export const SEED_STATE = {
    "social": "",
    "level": "Unknown",
    "acquisition_method": "",
-   "created_at": "2026-01-01"
+   "created_at": ""
   },
   {
    "id": "ct_008",
@@ -1764,7 +1764,7 @@ export const SEED_STATE = {
    "social": "@jaxgoods",
    "level": "Unknown",
    "acquisition_method": "",
-   "created_at": "2026-01-01"
+   "created_at": ""
   },
   {
    "id": "ct_009",
@@ -1776,7 +1776,7 @@ export const SEED_STATE = {
    "social": "@neptunemountaineering",
    "level": "Unknown",
    "acquisition_method": "",
-   "created_at": "2026-01-01"
+   "created_at": ""
   },
   {
    "id": "ct_010",
@@ -1788,7 +1788,7 @@ export const SEED_STATE = {
    "social": "@mountainhardwaresports",
    "level": "Unknown",
    "acquisition_method": "",
-   "created_at": "2026-01-01"
+   "created_at": ""
   },
   {
    "id": "ct_013",
@@ -1800,7 +1800,7 @@ export const SEED_STATE = {
    "social": "@foster_outdoor",
    "level": "Unknown",
    "acquisition_method": "",
-   "created_at": "2026-01-01"
+   "created_at": ""
   },
   {
    "id": "ct_014",
@@ -1812,7 +1812,7 @@ export const SEED_STATE = {
    "social": "FB Mountain Shop",
    "level": "Unknown",
    "acquisition_method": "",
-   "created_at": "2026-01-01"
+   "created_at": ""
   },
   {
    "id": "ct_015",
@@ -1824,7 +1824,7 @@ export const SEED_STATE = {
    "social": "@ascent.outdoors",
    "level": "Unknown",
    "acquisition_method": "",
-   "created_at": "2026-01-01"
+   "created_at": ""
   },
   {
    "id": "ct_016",
@@ -1836,7 +1836,7 @@ export const SEED_STATE = {
    "social": "@Feral       FB Feral",
    "level": "Unknown",
    "acquisition_method": "",
-   "created_at": "2026-01-01"
+   "created_at": ""
   },
   {
    "id": "ct_017",
@@ -1848,7 +1848,7 @@ export const SEED_STATE = {
    "social": "@happyhikernm",
    "level": "Unknown",
    "acquisition_method": "",
-   "created_at": "2026-01-01"
+   "created_at": ""
   },
   {
    "id": "ct_018",
@@ -1860,7 +1860,7 @@ export const SEED_STATE = {
    "social": "@spoutfitter",
    "level": "Unknown",
    "acquisition_method": "",
-   "created_at": "2026-01-01"
+   "created_at": ""
   },
   {
    "id": "ct_025",
@@ -1872,7 +1872,7 @@ export const SEED_STATE = {
    "social": "@packratoc",
    "level": "Unknown",
    "acquisition_method": "",
-   "created_at": "2026-01-01"
+   "created_at": ""
   },
   {
    "id": "ct_027",
@@ -1884,7 +1884,7 @@ export const SEED_STATE = {
    "social": "@trailful",
    "level": "Unknown",
    "acquisition_method": "",
-   "created_at": "2026-01-01"
+   "created_at": ""
   },
   {
    "id": "ct_028",
@@ -1896,7 +1896,7 @@ export const SEED_STATE = {
    "social": "@jhoutdoors1972",
    "level": "Unknown",
    "acquisition_method": "",
-   "created_at": "2026-01-01"
+   "created_at": ""
   },
   {
    "id": "ct_034",
@@ -1908,7 +1908,7 @@ export const SEED_STATE = {
    "social": "@sportago",
    "level": "Unknown",
    "acquisition_method": "",
-   "created_at": "2026-01-01"
+   "created_at": ""
   },
   {
    "id": "ct_035",
@@ -1920,7 +1920,7 @@ export const SEED_STATE = {
    "social": "@prooflab",
    "level": "Unknown",
    "acquisition_method": "",
-   "created_at": "2026-01-01"
+   "created_at": ""
   },
   {
    "id": "ct_036",
@@ -1932,7 +1932,7 @@ export const SEED_STATE = {
    "social": "@stokeddsm",
    "level": "Unknown",
    "acquisition_method": "",
-   "created_at": "2026-01-01"
+   "created_at": ""
   }
  ],
  "activities": [
@@ -2156,7 +2156,7 @@ export const SEED_STATE = {
    "replyType": "none",
    "replyReason": null,
    "sentiment": null,
-   "at": "2026-01-01T00:00:00",
+   "at": "",
    "round_id": null,
    "note": ""
   },
@@ -2170,7 +2170,7 @@ export const SEED_STATE = {
    "replyType": "human",
    "replyReason": null,
    "sentiment": null,
-   "at": "2026-01-01T00:00:00",
+   "at": "",
    "round_id": null,
    "note": ""
   },
@@ -2184,7 +2184,7 @@ export const SEED_STATE = {
    "replyType": "none",
    "replyReason": "拒绝",
    "sentiment": null,
-   "at": "2026-01-01T00:00:00",
+   "at": "",
    "round_id": null,
    "note": "现在没有扩展品牌的想法，不感兴趣，不要再发信息"
   },
@@ -2198,7 +2198,7 @@ export const SEED_STATE = {
    "replyType": "none",
    "replyReason": null,
    "sentiment": null,
-   "at": "2026-01-01T00:00:00",
+   "at": "",
    "round_id": null,
    "note": ""
   },
@@ -2212,7 +2212,7 @@ export const SEED_STATE = {
    "replyType": "none",
    "replyReason": null,
    "sentiment": null,
-   "at": "2026-01-01T00:00:00",
+   "at": "",
    "round_id": null,
    "note": ""
   },
@@ -2226,7 +2226,7 @@ export const SEED_STATE = {
    "replyType": "none",
    "replyReason": null,
    "sentiment": null,
-   "at": "2026-01-01T00:00:00",
+   "at": "",
    "round_id": null,
    "note": ""
   },
@@ -2240,7 +2240,7 @@ export const SEED_STATE = {
    "replyType": "none",
    "replyReason": null,
    "sentiment": null,
-   "at": "2026-01-01T00:00:00",
+   "at": "",
    "round_id": null,
    "note": ""
   },
@@ -2254,7 +2254,7 @@ export const SEED_STATE = {
    "replyType": "none",
    "replyReason": null,
    "sentiment": null,
-   "at": "2026-01-01T00:00:00",
+   "at": "",
    "round_id": null,
    "note": ""
   },
@@ -2268,7 +2268,7 @@ export const SEED_STATE = {
    "replyType": "none",
    "replyReason": null,
    "sentiment": null,
-   "at": "2026-01-01T00:00:00",
+   "at": "",
    "round_id": null,
    "note": ""
   },
@@ -2282,7 +2282,7 @@ export const SEED_STATE = {
    "replyType": "none",
    "replyReason": null,
    "sentiment": null,
-   "at": "2026-01-01T00:00:00",
+   "at": "",
    "round_id": null,
    "note": ""
   },
@@ -2296,7 +2296,7 @@ export const SEED_STATE = {
    "replyType": "none",
    "replyReason": null,
    "sentiment": null,
-   "at": "2026-01-01T00:00:00",
+   "at": "",
    "round_id": null,
    "note": ""
   },
@@ -2310,7 +2310,7 @@ export const SEED_STATE = {
    "replyType": "none",
    "replyReason": null,
    "sentiment": null,
-   "at": "2026-15-53T00:00:00",
+   "at": "2026-08-27T00:00:00",
    "round_id": null,
    "note": ""
   },
@@ -2324,7 +2324,7 @@ export const SEED_STATE = {
    "replyType": "none",
    "replyReason": null,
    "sentiment": null,
-   "at": "2026-01-01T00:00:00",
+   "at": "",
    "round_id": null,
    "note": ""
   },
@@ -2338,7 +2338,7 @@ export const SEED_STATE = {
    "replyType": "none",
    "replyReason": null,
    "sentiment": null,
-   "at": "2026-16-15T00:00:00",
+   "at": "2026-08-27T00:00:00",
    "round_id": null,
    "note": ""
   },
@@ -2352,7 +2352,7 @@ export const SEED_STATE = {
    "replyType": "none",
    "replyReason": null,
    "sentiment": null,
-   "at": "2026-01-01T00:00:00",
+   "at": "",
    "round_id": null,
    "note": ""
   },
@@ -2366,7 +2366,7 @@ export const SEED_STATE = {
    "replyType": "none",
    "replyReason": null,
    "sentiment": null,
-   "at": "2026-01-01T00:00:00",
+   "at": "",
    "round_id": null,
    "note": ""
   },
@@ -2380,7 +2380,7 @@ export const SEED_STATE = {
    "replyType": "none",
    "replyReason": null,
    "sentiment": null,
-   "at": "2026-01-01T00:00:00",
+   "at": "",
    "round_id": null,
    "note": ""
   },
@@ -2394,7 +2394,7 @@ export const SEED_STATE = {
    "replyType": "none",
    "replyReason": null,
    "sentiment": null,
-   "at": "2026-01-01T00:00:00",
+   "at": "",
    "round_id": null,
    "note": ""
   },
@@ -2408,7 +2408,7 @@ export const SEED_STATE = {
    "replyType": "none",
    "replyReason": null,
    "sentiment": null,
-   "at": "2026-01-01T00:00:00",
+   "at": "",
    "round_id": null,
    "note": ""
   },
@@ -2422,7 +2422,7 @@ export const SEED_STATE = {
    "replyType": "none",
    "replyReason": null,
    "sentiment": null,
-   "at": "2026-01-01T00:00:00",
+   "at": "",
    "round_id": null,
    "note": ""
   },
@@ -2436,7 +2436,7 @@ export const SEED_STATE = {
    "replyType": "none",
    "replyReason": null,
    "sentiment": null,
-   "at": "2026-01-01T00:00:00",
+   "at": "",
    "round_id": null,
    "note": ""
   },
@@ -2450,7 +2450,7 @@ export const SEED_STATE = {
    "replyType": "none",
    "replyReason": null,
    "sentiment": null,
-   "at": "2026-01-01T00:00:00",
+   "at": "",
    "round_id": null,
    "note": ""
   }
@@ -2458,7 +2458,7 @@ export const SEED_STATE = {
  "inbound_leads": [
   {
    "id": "IN-001",
-   "received_at": "2026-01-01",
+   "received_at": "",
    "country": "土耳其",
    "company": "https://www.instagram.com/sonsuzkamp/",
    "company_handle": "sonsuzkamp",
@@ -2481,12 +2481,12 @@ export const SEED_STATE = {
    "lost_reason": "客户不回复",
    "lead_owner": "时菊",
    "assigned_by": "陈晨",
-   "assigned_at": "2026-01-01T00:00:00",
+   "assigned_at": "",
    "note": ""
   },
   {
    "id": "IN-002",
-   "received_at": "2026-01-01",
+   "received_at": "",
    "country": "埃及",
    "company": "https://www.facebook.com/ayman.alrefaee",
    "company_handle": "ayman.alrefaee",
@@ -2506,12 +2506,12 @@ export const SEED_STATE = {
    "lost_reason": "计划先参观仓库",
    "lead_owner": "时菊",
    "assigned_by": "陈晨",
-   "assigned_at": "2026-01-01T00:00:00",
+   "assigned_at": "",
    "note": ""
   },
   {
    "id": "IN-003",
-   "received_at": "2026-01-01",
+   "received_at": "",
    "country": "印度",
    "company": "https://www.facebook.com/satyajit.sarker.1",
    "company_handle": "satyajit.sarker.1",
@@ -2531,12 +2531,12 @@ export const SEED_STATE = {
    "lost_reason": "产品不匹配",
    "lead_owner": "时菊",
    "assigned_by": "陈晨",
-   "assigned_at": "2026-01-01T00:00:00",
+   "assigned_at": "",
    "note": ""
   },
   {
    "id": "IN-004",
-   "received_at": "2026-01-01",
+   "received_at": "",
    "country": "伊朗",
    "company": "https://www.instagram.com/camp.video/",
    "company_handle": "camp.video",
@@ -2558,7 +2558,7 @@ export const SEED_STATE = {
    "lost_reason": "",
    "lead_owner": "时菊",
    "assigned_by": "陈晨",
-   "assigned_at": "2026-01-01T00:00:00",
+   "assigned_at": "",
    "note": ""
   },
   {

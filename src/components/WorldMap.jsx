@@ -53,6 +53,9 @@ export default function WorldMap({ points = [], onSelectMarket, activeMarket = n
           {projectedPoints.map((point, index) => {
             const active = activeMarket === point.market
             const color = COLOR_MAP[point.color] || COLOR_MAP.green
+            const pathBreakdown = Number.isFinite(point.outboundCount) && Number.isFinite(point.inboundCount)
+              ? `，Outbound ${point.outboundCount}，Inbound ${point.inboundCount}`
+              : ''
             // Keep low-volume neighbouring markets individually clickable.
             // Large radii made Turkey/Egypt and Germany overlap in Inbound mode.
             const radius = Math.min(8 + Math.sqrt(point.count) * 2, 21)
@@ -62,7 +65,7 @@ export default function WorldMap({ points = [], onSelectMarket, activeMarket = n
                 className={`map-point ${active ? 'active' : ''}`}
                 role="button"
                 tabIndex="0"
-                aria-label={`${point.market}，${point.count}${metricLabel}`}
+                aria-label={`${point.market}，${point.count}${metricLabel}${pathBreakdown}`}
                 onClick={() => onSelectMarket?.(point.market)}
                 onKeyDown={(event) => {
                   if (event.key === 'Enter' || event.key === ' ') {
@@ -71,6 +74,7 @@ export default function WorldMap({ points = [], onSelectMarket, activeMarket = n
                   }
                 }}
               >
+                <title>{`${point.market}：${point.count}${metricLabel}${pathBreakdown}`}</title>
                 <circle cx={point.x} cy={point.y} r={radius * 2.2} fill={color.glow} className="map-point-pulse" style={{ animationDelay: `${index * 180}ms` }} />
                 {active ? <circle cx={point.x} cy={point.y} r={radius * 1.55} className="map-selection-ring" style={{ stroke: color.hex }} /> : null}
                 <circle cx={point.x} cy={point.y} r={radius} fill={color.hex} className="map-point-core" />

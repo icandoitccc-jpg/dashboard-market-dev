@@ -719,9 +719,15 @@ select { cursor: pointer; }
 
 .daily-feed { display: flex; flex-direction: column; gap: 10px; }
 .daily-item { border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 12px; }
+.daily-item-head { display: flex; align-items: center; justify-content: space-between; }
 .daily-date { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+.daily-edited-tag { color: var(--text-2); }
+.daily-import-tag { color: #b8860b; }
+.daily-schedule { font-size: 12px; color: var(--text-2); white-space: pre-line; margin-top: 2px; }
 .daily-result { font-size: 12.5px; color: var(--text); }
 .daily-feeling, .daily-adjust { font-size: 12px; color: var(--text-2); margin-top: 3px; }
+.daily-log-form { border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 14px; margin-bottom: 14px; background: var(--surface-2, rgba(0,0,0,0.02)); }
+.daily-log-form .form-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
 
 @media (max-width: 880px) {
   .kpi-row { grid-template-columns: repeat(2, 1fr); }

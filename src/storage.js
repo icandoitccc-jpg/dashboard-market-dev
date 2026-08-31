@@ -71,6 +71,16 @@ function normalize(state) {
     if (placeholderDates.has(lead.assigned_at)) lead.assigned_at = ''
   })
 
+  // 早期版本没有记录「谁写的」，导致这几条历史每日复盘查无归属、谁的页面都看不到。
+  // 内容风格（新客户开发/老客户回复）判断是业务员的记录，先归到时菊名下；
+  // 如果判断有误，在界面里点「编辑」改成正确的人即可，不影响数据本身。
+  state.daily_rhythm.forEach((entry) => {
+    if (!entry.worker) {
+      entry.worker = '时菊'
+      entry.importNote = '早期导入数据，归属为系统推断，请确认'
+    }
+  })
+
   return state
 }
 

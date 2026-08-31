@@ -1,18 +1,24 @@
 import { useState } from 'react'
-import { Users, TrendingUp, Inbox, Target, ArrowLeft, Clock } from 'lucide-react'
+import { Users, TrendingUp, Inbox, Target, ArrowLeft } from 'lucide-react'
 import { computeWorkers, computeOutbound, computeInbound } from '../metrics'
 import SalesWorkspace from './SalesWorkspace'
+import DailyLog from './DailyLog'
 import { LEAD_STATUS_LABELS, LEAD_STATUSES } from '../metrics'
 
-export default function WorkerDetail({ state, setState, workerId, onNavigate, currentUser }) {
-  const [tab, setTab] = useState('overview')
+export default function WorkerDetail({ state, setState, workerId, onNavigate, currentUser, autoOpenDaily = false }) {
+  const [tab, setTab] = useState(autoOpenDaily ? 'analytics' : 'overview')
   const worker = state.workers.find((w) => w.id === workerId) || computeWorkers(state).find((w) => w.id === workerId)
   if (!worker) return <div className="empty-block">未找到该业务员。</div>
 
   const ids = new Set(state.prospects.filter((p) => p.owner === worker.name).map((p) => p.id))
   const ob = computeOutbound(state, { ownerIds: [worker.name] })
   const ib = computeInbound(state, { ownerIds: [worker.name] })
-  const daily = state.daily_rhythm || []
+  // 只显示这位业务员自己的每日复盘，不与其他人的记录混在一起
+  const daily = (state.daily_rhythm || [])
+    .filter((d) => d.worker === worker.name)
+    .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
+  const currentUserRole = state.workers.find((w) => w.name === currentUser)?.role
+  const canManagerEdit = currentUserRole === '主管' && currentUser !== worker.name
 
   return (
     <div className="dash-page worker-page">
@@ -75,21 +81,7 @@ export default function WorkerDetail({ state, setState, workerId, onNavigate, cu
               <div className="pa-card"><span className="pa-label">待跟进提醒</span><strong className="pa-value pa-warn">{worker.pending}</strong></div>
             </div>
           </section>
-          <div className="panel">
-            <h3><Clock size={15} />工作节奏记录 <small>每日工作节奏记录（真实备注，非考评）</small></h3>
-            {daily.length ? (
-              <div className="daily-feed">
-                {daily.map((d) => (
-                  <div className="daily-item" key={d.id}>
-                    <div className="daily-date">{d.date}</div>
-                    {d.result ? <div className="daily-result">{d.result}</div> : null}
-                    {d.feeling ? <div className="daily-feeling">感受：{d.feeling}</div> : null}
-                    {d.adjustment ? <div className="daily-adjust">调整：{d.adjustment}</div> : null}
-                  </div>
-                ))}
-              </div>
-            ) : <p className="contact-empty">暂无每日工作节奏记录。</p>}
-          </div>
+          <DailyLog entries={daily} worker={worker.name} currentUser={currentUser} canManagerEdit={canManagerEdit} setState={setState} autoOpen={autoOpenDaily} />
         </div>
       )}
     </div>

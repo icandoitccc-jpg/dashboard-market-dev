@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { LayoutDashboard, TrendingUp, Inbox, Users } from 'lucide-react'
+import { LayoutDashboard, TrendingUp, Inbox, Users, Clock } from 'lucide-react'
 import Overview from './components/Overview'
 import OutboundView from './components/OutboundView'
 import InboundView from './components/InboundLeads'
@@ -25,7 +25,10 @@ export default function App() {
   const navigate = (v) => setView(v)
 
   const isWorker = view.startsWith('worker:')
-  const workerId = isWorker ? view.slice('worker:'.length) : null
+  // 支持 worker:姓名 或 worker:姓名:daily（daily 会直接跳到「记录今天」表单，减少点击）
+  const workerParts = isWorker ? view.slice('worker:'.length).split(':') : []
+  const workerId = isWorker ? workerParts[0] : null
+  const autoOpenDaily = isWorker && workerParts[1] === 'daily'
 
   return (
     <div className="app-shell">
@@ -48,6 +51,9 @@ export default function App() {
           })}
         </nav>
         <div className="topbar-user">
+          <button type="button" className="button outline compact" onClick={() => setView(`worker:${currentUser}:daily`)}>
+            <Clock size={14} />记录今天
+          </button>
           <span className="avatar">{currentUser.slice(0, 1)}</span>
           <select className="user-switch" value={currentUser} onChange={(e) => setCurrentUser(e.target.value)} aria-label="切换当前操作员">
             {state.workers.map((w) => <option key={w.name} value={w.name}>{w.name} · {w.role}</option>)}
@@ -60,7 +66,7 @@ export default function App() {
         {view === 'outbound' && <OutboundView state={state} setState={setState} currentUser={currentUser} />}
         {view === 'inbound' && <InboundView state={state} setState={setState} currentUser={currentUser} />}
         {view === 'team' && <TeamView state={state} onNavigate={navigate} />}
-        {isWorker && <WorkerDetail state={state} setState={setState} workerId={workerId} onNavigate={navigate} currentUser={currentUser} />}
+        {isWorker && <WorkerDetail state={state} setState={setState} workerId={workerId} onNavigate={navigate} currentUser={currentUser} autoOpenDaily={autoOpenDaily} />}
       </main>
     </div>
   )

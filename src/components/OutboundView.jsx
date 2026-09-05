@@ -1,11 +1,14 @@
-import { TrendingUp, Users } from 'lucide-react'
+import { TrendingUp, Users, ArrowLeft } from 'lucide-react'
 import { computeOutbound } from '../metrics'
 import SalesWorkspace from './SalesWorkspace'
 
-export default function OutboundView({ state, setState, currentUser, initialSelectedId }) {
+export default function OutboundView({ state, setState, currentUser, initialSelectedId, onNavigate }) {
   const ob = computeOutbound(state, {})
   return (
     <div className="flow-page">
+      {initialSelectedId && onNavigate ? (
+        <button type="button" className="back-link" onClick={() => onNavigate('contacts')}><ArrowLeft size={15} />全部客户</button>
+      ) : null}
       <div className="flow-header">
         <div>
           <h1>总体 Outbound</h1>

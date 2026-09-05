@@ -1,8 +1,15 @@
 import { useMemo, useState } from 'react'
-import { ChevronRight, Inbox, Plus, Search } from 'lucide-react'
+import { ChevronRight, Inbox, Plus, Search, ArrowLeft } from 'lucide-react'
 import { computeInbound, LEAD_STATUS_LABELS, LEAD_STATUSES } from '../metrics'
 import Combobox from './Combobox'
 import { getOptions, registerOption } from '../dict'
+
+// 从社媒主页链接里提取可读用户名：https://www.instagram.com/icebathusa/ -> icebathusa
+function extractHandle(url) {
+  if (!url) return ''
+  const match = String(url).replace(/\/$/, '').match(/\/([^/]+)$/)
+  return match ? match[1] : url
+}
 
 const SOURCE_PLATFORMS = ['Instagram', 'Facebook', 'LinkedIn', 'Website', 'WhatsApp', 'Email', '其他']
 const NEED_DISCOVERY = ['产品匹配', '采购权/预算', '交期要求', '现有供应商', '决策流程']
@@ -20,7 +27,7 @@ const blankForm = (currentUser = '陈晨') => ({
   need_discovery: [],
 })
 
-export default function InboundView({ state, setState, currentUser = '陈晨', initialSelectedId = null }) {
+export default function InboundView({ state, setState, currentUser = '陈晨', initialSelectedId = null, onNavigate }) {
   const [selectedId, setSelectedId] = useState(initialSelectedId || state.inbound_leads[0]?.id)
   const [search, setSearch] = useState('')
   const [showAdd, setShowAdd] = useState(false)
@@ -73,6 +80,9 @@ export default function InboundView({ state, setState, currentUser = '陈晨', i
   if (!selected) {
     return (
       <div className="flow-page">
+        {initialSelectedId && onNavigate ? (
+          <button type="button" className="back-link" onClick={() => onNavigate('contacts')}><ArrowLeft size={15} />全部客户</button>
+        ) : null}
         <div className="flow-header"><div><h1>总体 Inbound</h1><p>客户主动发来的询盘（社媒私信、官网表单、邮件等）在这里接入，与 Outbound 平级、互不污染。</p></div></div>
         <div className="sales-layout">
           <section className="prospect-rail"><div className="rail-heading"><h1>Inbound 询盘</h1><button className="button outline" onClick={() => setShowAdd(true)}><Plus size={17} />接入询盘</button></div><div className="empty-list">还没有 Inbound 询盘记录</div></section>
@@ -85,6 +95,9 @@ export default function InboundView({ state, setState, currentUser = '陈晨', i
 
   return (
     <div className="flow-page">
+      {initialSelectedId && onNavigate ? (
+        <button type="button" className="back-link" onClick={() => onNavigate('contacts')}><ArrowLeft size={15} />全部客户</button>
+      ) : null}
       <div className="flow-header"><div><h1>总体 Inbound</h1><p>客户主动询盘接入、需求发现与转化跟进；事件写入 flow_type=inbound，不污染 Outbound 指标。</p></div></div>
       <div className="metrics-row">
         <div className="metric-card blue"><div className="mc-body"><span className="mc-label">总询盘</span><strong className="mc-value">{ib.total}</strong><small className="mc-sub">条</small></div></div>
@@ -107,7 +120,12 @@ export default function InboundView({ state, setState, currentUser = '陈晨', i
         </section>
 
         <section className="customer-workspace">
-          <div className="customer-heading"><div><h1>询盘详情</h1><p>原始留言、需求发现、状态与跟进都在这里。</p></div></div>
+          <div className="customer-heading">
+            <div>
+              <h1>{selected.company_handle || extractHandle(selected.company) || selected.contact || '未命名询盘'} <small style={{ fontWeight: 400, fontSize: 13, color: 'var(--muted)' }}>· {selected.source_platform} · {selected.country || '国家未填'}</small></h1>
+              <p>原始留言、需求发现、状态与跟进都在这里。</p>
+            </div>
+          </div>
           <div className="customer-meta">
             <div className="customer-fields">
               <div><span>来源平台</span><select value={selected.source_platform} onChange={(e) => updateLead(selected.id, { source_platform: e.target.value })}>{SOURCE_PLATFORMS.map((p) => <option key={p}>{p}</option>)}</select></div>

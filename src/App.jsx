@@ -152,8 +152,8 @@ export default function App() {
       <main className="main-content">
         {view === 'overview' && <Overview state={state} onNavigate={navigate} />}
         {view === 'contacts' && <AllContacts state={state} onNavigate={navigate} />}
-        {isOutbound && <OutboundView key={outboundId || 'all'} state={state} setState={setState} currentUser={currentUser} initialSelectedId={outboundId} />}
-        {isInbound && <InboundView key={inboundId || 'all'} state={state} setState={setState} currentUser={currentUser} initialSelectedId={inboundId} />}
+        {isOutbound && <OutboundView key={outboundId || 'all'} state={state} setState={setState} currentUser={currentUser} initialSelectedId={outboundId} onNavigate={navigate} />}
+        {isInbound && <InboundView key={inboundId || 'all'} state={state} setState={setState} currentUser={currentUser} initialSelectedId={inboundId} onNavigate={navigate} />}
         {view === 'team' && <TeamView state={state} onNavigate={navigate} />}
         {isWorker && <WorkerDetail state={state} setState={setState} workerId={workerId} onNavigate={navigate} currentUser={currentUser} autoOpenDaily={autoOpenDaily} />}
       </main>

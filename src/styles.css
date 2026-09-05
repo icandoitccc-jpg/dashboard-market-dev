@@ -114,6 +114,22 @@ h1, h2, h3 { margin: 0; font-weight: 600; letter-spacing: -0.2px; }
   box-shadow: 0 0 0 1px var(--green-glow), 0 4px 12px rgba(34, 197, 94, 0.10);
 }
 .topbar-user { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--text-2); margin-left: 8px; }
+.current-user-label { white-space: nowrap; }
+
+.app-loading { display: flex; align-items: center; justify-content: center; height: 100vh; color: var(--muted); font-size: 13px; }
+
+.login-shell { display: flex; align-items: center; justify-content: center; height: 100vh; background: var(--bg, #f6f7f9); }
+.login-card { display: flex; flex-direction: column; gap: 14px; width: 320px; padding: 28px; border: 0.5px solid var(--border); border-radius: var(--radius, 12px); background: #fff; box-shadow: 0 8px 30px rgba(0,0,0,0.06); }
+.login-brand { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+.login-title { font-size: 14px; font-weight: 600; }
+.login-subtitle { font-size: 11px; color: var(--muted); }
+.login-card label { display: flex; flex-direction: column; gap: 5px; font-size: 12px; color: var(--muted); }
+.login-card input { border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 8px 10px; font-size: 13px; }
+.login-error { font-size: 12px; color: #c0392b; }
+.login-hint { font-size: 11.5px; color: var(--muted); text-align: center; margin: 0; }
+
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.spin { animation: spin 0.8s linear infinite; }
 .avatar {
   width: 30px; height: 30px; border-radius: 50%;
   background: linear-gradient(135deg, var(--green) 0%, var(--cyan) 100%);

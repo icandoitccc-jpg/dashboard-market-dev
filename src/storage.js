@@ -1,120 +1,171 @@
-// v6: 剔除05表开头5条演示行(业务1/2/3/4，美国真人回复全是演示) → 40→37（美15+澳22），美国真人回复=0
-// v5: 只保留「确认触达过(发过信息)」的客户（纯档案客户不入库）→ 62→40（美18+澳22）
-const KEY = 'market-path-lab-state-v6'
-const USER_KEY = 'market-path-lab-current-user'
+// v7: 从浏览器本地存储切换为 Supabase 在线数据库。
+// 数据结构（字段名）在 App 内部保持不变，只在这一层做 JS 字段名 <-> 数据库列名 的转换，
+// 这样组件代码（AddCustomerModal / CustomerDetail / InboundLeads / DailyLog 等）完全不用改。
+import { supabase } from './supabaseClient'
 
-import { SEED_STATE } from './seedData'
+const USER_KEY = 'market-path-lab-current-user' // 仅作为断线时的显示兜底，不作为身份依据
 
-// Migration / backfill applied to every loaded state so the app never crashes
-// on older shapes and so new Shared Layer arrays + flow_type tagging exist.
-// NOTE: flow_type is stamped on Acquisitions (activities/rounds) only — Company
-// stays flow-neutral per the agreed architecture.
-function normalize(state) {
-  if (!state || typeof state !== 'object') state = {}
+// ---------- 空值处理：Postgres 的 date/timestamp 列不接受空字符串 ----------
+const emptyToNull = (v) => (v === '' || v === undefined ? null : v)
 
-  if (!Array.isArray(state.prospects)) state.prospects = []
-  if (!Array.isArray(state.rounds)) state.rounds = []
-  if (!Array.isArray(state.contacts)) state.contacts = []
-  if (!Array.isArray(state.activities)) state.activities = []
-  if (!Array.isArray(state.follow_up_tasks)) state.follow_up_tasks = []
-  if (!Array.isArray(state.inbound_leads)) state.inbound_leads = []
-  if (!Array.isArray(state.daily_rhythm)) state.daily_rhythm = []
-  if (!Array.isArray(state.workers)) state.workers = []
-  // v4 新增：共享下拉字典 + 前线事件流（老 localStorage 数据也要有，否则表单崩溃）
-  if (!state.customOptions || typeof state.customOptions !== 'object') state.customOptions = {}
-  ;['sourceMethod', 'customerType', 'channels', 'replyReason', 'stuckAt', 'inboundNeedType'].forEach((f) => {
-    if (!Array.isArray(state.customOptions[f])) state.customOptions[f] = []
-  })
-  if (!Array.isArray(state.frontline_events)) state.frontline_events = []
-
-  // Ensure every prospect has a channels array (touch form needs it).
-  state.prospects.forEach((prospect) => {
-    if (!Array.isArray(prospect.channels)) prospect.channels = []
-    if (!prospect.id) prospect.id = `c_${Math.random().toString(36).slice(2, 8)}`
-  })
-  state.rounds.forEach((round) => {
-    if (!round.flow_type) round.flow_type = 'outbound'
-  })
-
-  // Historical imports used 2026-01-01 as a placeholder when the source cell
-  // had no usable date. Never show that invented date. For outreach events we
-  // can safely recover the first-contact date from the same customer record;
-  // otherwise the date remains blank until a user records it.
-  const placeholderDates = new Set(['2026-01-01', '2026-01-01T00:00:00'])
-  const knownDateCorrections = new Map([['c_049', '2026-08-27'], ['c_051', '2026-08-27']])
-  const isInvalidImportedDate = (value) => placeholderDates.has(value) || (
-    typeof value === 'string' && /^2026-/.test(value) && Number.isNaN(new Date(value).getTime())
-  )
-  const prospectById = new Map(state.prospects.map((prospect) => [prospect.id, prospect]))
-  state.prospects.forEach((prospect) => {
-    const corrected = knownDateCorrections.get(prospect.id) || ''
-    if (isInvalidImportedDate(prospect.first_contact) || (!prospect.first_contact && corrected)) prospect.first_contact = corrected
-    if (isInvalidImportedDate(prospect.last_sent)) prospect.last_sent = corrected
-    prospect.channels.forEach((channel) => {
-      if (placeholderDates.has(channel.discoveredAt)) channel.discoveredAt = ''
-    })
-  })
-  state.contacts.forEach((contact) => {
-    if (placeholderDates.has(contact.created_at)) contact.created_at = ''
-  })
-  state.activities.forEach((activity) => {
-    const firstContact = prospectById.get(activity.company_id)?.first_contact
-    const recoverableSeedDate = !activity.at && activity.id?.endsWith('_seed') && firstContact
-    if (!isInvalidImportedDate(activity.at) && !recoverableSeedDate) return
-    activity.at = firstContact ? `${firstContact}T00:00:00` : ''
-  })
-  state.follow_up_tasks.forEach((task) => {
-    if (placeholderDates.has(task.created_at)) task.created_at = ''
-  })
-  state.inbound_leads.forEach((lead) => {
-    if (placeholderDates.has(lead.received_at)) lead.received_at = ''
-    if (placeholderDates.has(lead.assigned_at)) lead.assigned_at = ''
-  })
-
-  // 早期版本没有记录「谁写的」，导致这几条历史每日复盘查无归属、谁的页面都看不到。
-  // 内容风格（新客户开发/老客户回复）判断是业务员的记录，先归到时菊名下；
-  // 如果判断有误，在界面里点「编辑」改成正确的人即可，不影响数据本身。
-  state.daily_rhythm.forEach((entry) => {
-    if (!entry.worker) {
-      entry.worker = '时菊'
-      entry.importNote = '早期导入数据，归属为系统推断，请确认'
-    }
-  })
-
-  return state
-}
-
-export function loadState() {
-  try {
-    const saved = localStorage.getItem(KEY)
-    if (saved) return normalize(JSON.parse(saved))
-  } catch {
-    // Fall back to the bundled real-data seed.
+// ================= 字段名映射：DB(snake_case) <-> 前端(原有命名) =================
+function rowToProspect(r) {
+  return {
+    id: r.id, name: r.name, market: r.market, region: r.region, segment: r.segment,
+    style_fit: r.style_fit, scale: r.scale, status: r.status, source: r.source, owner: r.owner,
+    website: r.website, url: r.url, domain: r.domain, quoted: !!r.quoted, sampled: !!r.sampled,
+    first_contact: r.first_contact || '', channel: r.channel, touch_count: r.touch_count || 0,
+    batch: r.batch, last_sent: r.last_sent || '', remark: r.remark,
+    customerType: r.customer_type, sourceMethod: r.source_method, fitNote: r.fit_note,
+    discovered_at: r.discovered_at, channels: Array.isArray(r.channels) ? r.channels : [],
+    updatedAt: r.updated_at, next_follow: r.next_follow, feedback: r.feedback,
+    replyReason: r.reply_reason, stuckAt: r.stuck_at,
   }
-  // Deep clone so the immutable seed module is never mutated in place.
-  return normalize(JSON.parse(JSON.stringify(SEED_STATE)))
+}
+function prospectToRow(p) {
+  return {
+    id: p.id, name: p.name, market: p.market, region: p.region, segment: p.segment,
+    style_fit: p.style_fit, scale: p.scale, status: p.status, source: p.source, owner: p.owner,
+    website: p.website, url: p.url, domain: p.domain, quoted: !!p.quoted, sampled: !!p.sampled,
+    first_contact: emptyToNull(p.first_contact), channel: p.channel, touch_count: p.touch_count || 0,
+    batch: p.batch, last_sent: emptyToNull(p.last_sent), remark: p.remark,
+    customer_type: p.customerType, source_method: p.sourceMethod, fit_note: p.fitNote,
+    discovered_at: emptyToNull(p.discovered_at), channels: p.channels || [],
+    updated_at: p.updatedAt ?? null, next_follow: p.next_follow, feedback: p.feedback,
+    reply_reason: p.replyReason, stuck_at: p.stuckAt,
+  }
 }
 
-export function saveState(state) {
-  localStorage.setItem(KEY, JSON.stringify(state))
+function rowToContact(r) { return { ...r } } // 字段名本来就一致
+function contactToRow(c) {
+  return { ...c, created_at: emptyToNull(c.created_at) }
 }
 
-export function resetState() {
-  localStorage.removeItem(KEY)
+function rowToActivity(r) {
+  return {
+    id: r.id, company_id: r.company_id, contact_id: r.contact_id, flow_type: r.flow_type,
+    channel: r.channel, kind: r.kind, replyType: r.reply_type, replyReason: r.reply_reason,
+    sentiment: r.sentiment, at: r.at, round_id: r.round_id, note: r.note,
+  }
+}
+function activityToRow(a) {
+  return {
+    id: a.id, company_id: a.company_id, contact_id: a.contact_id, flow_type: a.flow_type,
+    channel: a.channel, kind: a.kind, reply_type: a.replyType === 'none' ? null : a.replyType,
+    reply_reason: a.replyReason, sentiment: a.sentiment, at: emptyToNull(a.at),
+    round_id: a.round_id, note: a.note,
+  }
 }
 
-// "当前操作员" = 谁在录入这条数据。归属原则：谁录入，客户/询盘就归谁
-// （跨 Outbound / Inbound / 未来老客户三条路统一）。与数据本身分开持久化。
+function rowToFollowUp(r) { return { ...r } }
+function followUpToRow(t) { return { ...t, created_at: emptyToNull(t.created_at), done_at: emptyToNull(t.done_at) } }
+
+function rowToLead(r) { return { ...r, need_type: r.need_type || [], need_discovery: r.need_discovery || [] } }
+function leadToRow(l) {
+  return {
+    ...l,
+    received_at: emptyToNull(l.received_at),
+    last_contact: emptyToNull(l.last_contact),
+    follow_up: emptyToNull(l.follow_up),
+    assigned_at: emptyToNull(l.assigned_at),
+    need_type: l.need_type || [],
+    need_discovery: Array.isArray(l.need_discovery) ? l.need_discovery : (l.need_discovery ? [l.need_discovery] : []),
+  }
+}
+
+function rowToDaily(r) {
+  return {
+    id: r.id, date: r.date, schedule: r.schedule, interruption: r.interruption, result: r.result,
+    feeling: r.feeling, adjustment: r.adjustment, worker: r.worker, created_by: r.created_by,
+    created_at: r.created_at, updated_by: r.updated_by, updated_at: r.updated_at, importNote: r.import_note,
+  }
+}
+function dailyToRow(d) {
+  return {
+    id: d.id, date: emptyToNull(d.date), schedule: d.schedule, interruption: d.interruption,
+    result: d.result, feeling: d.feeling, adjustment: d.adjustment, worker: d.worker,
+    created_by: d.created_by, created_at: emptyToNull(d.created_at), updated_by: d.updated_by,
+    updated_at: emptyToNull(d.updated_at), import_note: d.importNote,
+  }
+}
+
+// ================= 加载：从各表拉取，拼成 App 内部一直使用的 state 形状 =================
+export async function loadState() {
+  const [prospects, contacts, activities, followUps, leads, daily, options, events, profiles] = await Promise.all([
+    supabase.from('prospects').select('*'),
+    supabase.from('contacts').select('*'),
+    supabase.from('activities').select('*'),
+    supabase.from('follow_up_tasks').select('*'),
+    supabase.from('inbound_leads').select('*'),
+    supabase.from('daily_rhythm').select('*'),
+    supabase.from('custom_options').select('*'),
+    supabase.from('frontline_events').select('*').order('created_at', { ascending: false }),
+    supabase.from('profiles').select('*'),
+  ])
+
+  const firstError = [prospects, contacts, activities, followUps, leads, daily, options, events, profiles]
+    .find((r) => r.error)?.error
+  if (firstError) throw firstError
+
+  const customOptions = { sourceMethod: [], customerType: [], channels: [], replyReason: [], stuckAt: [], inboundNeedType: [] }
+  ;(options.data || []).forEach((o) => {
+    if (!customOptions[o.field]) customOptions[o.field] = []
+    customOptions[o.field].push(o.value)
+  })
+
+  return {
+    prospects: (prospects.data || []).map(rowToProspect),
+    contacts: (contacts.data || []).map(rowToContact),
+    activities: (activities.data || []).map(rowToActivity),
+    follow_up_tasks: (followUps.data || []).map(rowToFollowUp),
+    inbound_leads: (leads.data || []).map(rowToLead),
+    daily_rhythm: (daily.data || []).map(rowToDaily),
+    customOptions,
+    frontline_events: (events.data || []).map((e) => ({
+      id: e.id, worker: e.created_by, field: e.field, value: e.value, at: e.created_at,
+    })),
+    workers: (profiles.data || []).map((p) => ({ id: p.name, name: p.name, role: p.role })),
+    rounds: [],
+  }
+}
+
+// ================= 保存：整表按主键 upsert，不做全表删除，安全防丢数据 =================
+// 说明：这个函数在 state 每次变化时整体调用一次（App.jsx 的 useEffect）。
+// 由于是 upsert（存在则更新/不存在则插入），不会误删别的设备刚写入、本机还没刷新到的数据。
+export async function saveState(state) {
+  const tasks = []
+  if (state.prospects?.length) tasks.push(supabase.from('prospects').upsert(state.prospects.map(prospectToRow)))
+  if (state.contacts?.length) tasks.push(supabase.from('contacts').upsert(state.contacts.map(contactToRow)))
+  if (state.activities?.length) tasks.push(supabase.from('activities').upsert(state.activities.map(activityToRow)))
+  if (state.follow_up_tasks?.length) tasks.push(supabase.from('follow_up_tasks').upsert(state.follow_up_tasks.map(followUpToRow)))
+  if (state.inbound_leads?.length) tasks.push(supabase.from('inbound_leads').upsert(state.inbound_leads.map(leadToRow)))
+  if (state.daily_rhythm?.length) tasks.push(supabase.from('daily_rhythm').upsert(state.daily_rhythm.map(dailyToRow)))
+
+  const optionRows = []
+  Object.entries(state.customOptions || {}).forEach(([field, values]) => {
+    (values || []).forEach((value) => optionRows.push({ field, value }))
+  })
+  if (optionRows.length) tasks.push(supabase.from('custom_options').upsert(optionRows, { onConflict: 'field,value', ignoreDuplicates: true }))
+
+  if (state.frontline_events?.length) {
+    const eventRows = state.frontline_events.map((e) => ({
+      id: e.id, field: e.field, value: e.value, created_by: e.worker, created_at: e.at,
+    }))
+    tasks.push(supabase.from('frontline_events').upsert(eventRows))
+  }
+
+  const results = await Promise.all(tasks)
+  const failed = results.find((r) => r.error)
+  if (failed) {
+    // eslint-disable-next-line no-console
+    console.error('保存到数据库失败：', failed.error)
+  }
+}
+
+// "当前登录人" 现在由 Supabase Auth 会话决定，这里只保留一个断网兜底显示用的缓存。
 export function loadCurrentUser() {
-  try {
-    const saved = localStorage.getItem(USER_KEY)
-    if (saved) return saved
-  } catch {
-    // 忽略，回退默认
-  }
-  return '陈晨'
+  try { return localStorage.getItem(USER_KEY) || '' } catch { return '' }
 }
-
 export function saveCurrentUser(name) {
-  localStorage.setItem(USER_KEY, name)
+  try { localStorage.setItem(USER_KEY, name) } catch { /* 忽略 */ }
 }

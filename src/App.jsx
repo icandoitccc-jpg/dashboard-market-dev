@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { LayoutDashboard, TrendingUp, Inbox, Users, Clock, LogOut, RefreshCw } from 'lucide-react'
+import { LayoutDashboard, TrendingUp, Inbox, Users, Users2, Clock, LogOut, RefreshCw } from 'lucide-react'
 import Overview from './components/Overview'
+import AllContacts from './components/AllContacts'
 import OutboundView from './components/OutboundView'
 import InboundView from './components/InboundLeads'
 import TeamView from './components/TeamView'
@@ -11,6 +12,7 @@ import { supabase } from './supabaseClient'
 
 const NAV = [
   { key: 'overview', label: '看板总览', icon: LayoutDashboard },
+  { key: 'contacts', label: '全部客户', icon: Users2 },
   { key: 'outbound', label: '总体 Outbound', icon: TrendingUp },
   { key: 'inbound', label: '总体 Inbound', icon: Inbox },
   { key: 'team', label: '业务员动向', icon: Users },
@@ -99,6 +101,15 @@ export default function App() {
   const workerId = isWorker ? workerParts[0] : null
   const autoOpenDaily = isWorker && workerParts[1] === 'daily'
 
+  // 支持从「全部客户」直接跳到某个 Outbound 客户 / Inbound 询盘的详情：
+  // view = 'outbound:c_005' 或 'inbound:IN-001'。用 id 做 key 强制重新挂载，
+  // 保证每次跳转都能选中正确的那一条，不会停留在上一次打开的记录上。
+  const isOutbound = view === 'outbound' || view.startsWith('outbound:')
+  const outboundId = view.startsWith('outbound:') ? view.slice('outbound:'.length) : null
+  const isInbound = view === 'inbound' || view.startsWith('inbound:')
+  const inboundId = view.startsWith('inbound:') ? view.slice('inbound:'.length) : null
+  const activeNav = isOutbound ? 'outbound' : isInbound ? 'inbound' : view
+
   return (
     <div className="app-shell">
       <header className="topbar">
@@ -113,7 +124,7 @@ export default function App() {
           {NAV.map((tab) => {
             const Icon = tab.icon
             return (
-              <button key={tab.key} className={`top-nav-item ${view === tab.key ? 'active' : ''}`} onClick={() => setView(tab.key)}>
+              <button key={tab.key} className={`top-nav-item ${activeNav === tab.key ? 'active' : ''}`} onClick={() => setView(tab.key)}>
                 <Icon size={15} />{tab.label}
               </button>
             )
@@ -140,8 +151,9 @@ export default function App() {
 
       <main className="main-content">
         {view === 'overview' && <Overview state={state} onNavigate={navigate} />}
-        {view === 'outbound' && <OutboundView state={state} setState={setState} currentUser={currentUser} />}
-        {view === 'inbound' && <InboundView state={state} setState={setState} currentUser={currentUser} />}
+        {view === 'contacts' && <AllContacts state={state} onNavigate={navigate} />}
+        {isOutbound && <OutboundView key={outboundId || 'all'} state={state} setState={setState} currentUser={currentUser} initialSelectedId={outboundId} />}
+        {isInbound && <InboundView key={inboundId || 'all'} state={state} setState={setState} currentUser={currentUser} initialSelectedId={inboundId} />}
         {view === 'team' && <TeamView state={state} onNavigate={navigate} />}
         {isWorker && <WorkerDetail state={state} setState={setState} workerId={workerId} onNavigate={navigate} currentUser={currentUser} autoOpenDaily={autoOpenDaily} />}
       </main>

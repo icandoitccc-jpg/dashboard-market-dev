@@ -2,7 +2,7 @@ import { TrendingUp, Users } from 'lucide-react'
 import { computeOutbound } from '../metrics'
 import SalesWorkspace from './SalesWorkspace'
 
-export default function OutboundView({ state, setState, currentUser }) {
+export default function OutboundView({ state, setState, currentUser, initialSelectedId }) {
   const ob = computeOutbound(state, {})
   return (
     <div className="flow-page">
@@ -20,7 +20,7 @@ export default function OutboundView({ state, setState, currentUser }) {
         <div className="metric-card amber"><div className="mc-body"><span className="mc-label">无回应率</span><strong className="mc-value">{ob.noResponseRate}</strong><small className="mc-sub">{ob.none} 次</small></div></div>
         <div className="metric-card default"><div className="mc-body"><span className="mc-label">获真人回复客户</span><strong className="mc-value">{ob.humanCompanies}</strong><small className="mc-sub">/ {ob.touchedCompanies} 已触达</small></div></div>
       </div>
-      <SalesWorkspace state={state} setState={setState} ownerId={null} currentUser={currentUser} />
+      <SalesWorkspace state={state} setState={setState} ownerId={null} currentUser={currentUser} initialSelectedId={initialSelectedId} />
     </div>
   )
 }

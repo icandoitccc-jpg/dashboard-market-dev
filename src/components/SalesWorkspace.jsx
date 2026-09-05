@@ -8,8 +8,8 @@ import { registerOption } from '../dict'
 // Used by the manager's "总体 Outbound" view (ownerId=null) and a worker's
 // Outbound tab (ownerId set). When ownerId is set, a personal analytics band
 // is shown so the worker sees their own feedback — this is their辅助工具.
-export default function SalesWorkspace({ state, setState, ownerId = null, currentUser = '陈晨' }) {
-  const [selectedId, setSelectedId] = useState(null)
+export default function SalesWorkspace({ state, setState, ownerId = null, currentUser = '陈晨', initialSelectedId = null }) {
+  const [selectedId, setSelectedId] = useState(initialSelectedId)
   const [search, setSearch] = useState('')
   const [showAdd, setShowAdd] = useState(false)
 

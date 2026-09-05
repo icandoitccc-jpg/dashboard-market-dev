@@ -20,8 +20,8 @@ const blankForm = (currentUser = '陈晨') => ({
   need_discovery: [],
 })
 
-export default function InboundView({ state, setState, currentUser = '陈晨' }) {
-  const [selectedId, setSelectedId] = useState(state.inbound_leads[0]?.id)
+export default function InboundView({ state, setState, currentUser = '陈晨', initialSelectedId = null }) {
+  const [selectedId, setSelectedId] = useState(initialSelectedId || state.inbound_leads[0]?.id)
   const [search, setSearch] = useState('')
   const [showAdd, setShowAdd] = useState(false)
   const [form, setForm] = useState(blankForm(currentUser))

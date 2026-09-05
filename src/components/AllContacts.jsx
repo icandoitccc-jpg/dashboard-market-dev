@@ -2,6 +2,14 @@ import { useMemo, useState } from 'react'
 import { Search, ChevronRight, Users } from 'lucide-react'
 import { LEAD_STATUS_LABELS } from '../metrics'
 
+// 从社媒主页链接里提取出可读的用户名，比如
+// https://www.instagram.com/icebathusa/ -> icebathusa
+function extractHandle(url) {
+  if (!url) return ''
+  const match = String(url).replace(/\/$/, '').match(/\/([^/]+)$/)
+  return match ? match[1] : url
+}
+
 // 「全部客户」= Outbound 客户档案 + Inbound 询盘，合并成一个可搜索、可一屏浏览的清单。
 // 两类数据结构不同、字段不同，这里只做展示层的归一化，不改动底层数据表。
 // 点击一行会跳到对应的 Outbound / Inbound 详情页（由 App.jsx 负责路由）。
@@ -22,9 +30,11 @@ export default function AllContacts({ state, onNavigate }) {
     }))
     const inboundRows = state.inbound_leads.map((l) => ({
       key: `inbound:${l.id}`,
+      // 询盘经常还没确认公司名，优先显示干净的用户名（company_handle），
+      // 其次从主页链接里提取用户名，而不是整条 URL
       type: 'inbound',
       id: l.id,
-      name: l.company || l.company_handle || l.contact || '未命名询盘',
+      name: l.company_handle || extractHandle(l.company) || l.contact || '未命名询盘',
       place: l.country || '',
       status: LEAD_STATUS_LABELS[l.inbound_status] || l.inbound_status || '新询盘',
       owner: l.lead_owner || '未署名',

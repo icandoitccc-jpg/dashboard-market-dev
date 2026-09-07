@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { ChevronRight, Inbox, Plus, Search, ArrowLeft } from 'lucide-react'
+import { ChevronRight, Plus, Search, ArrowLeft, Pencil, MessageSquare, RefreshCw } from 'lucide-react'
 import { computeInbound, LEAD_STATUS_LABELS, LEAD_STATUSES } from '../metrics'
 import Combobox from './Combobox'
 import { getOptions, registerOption } from '../dict'
@@ -13,6 +13,20 @@ function extractHandle(url) {
 
 const SOURCE_PLATFORMS = ['Instagram', 'Facebook', 'LinkedIn', 'Website', 'WhatsApp', 'Email', '其他']
 const NEED_DISCOVERY = ['产品匹配', '采购权/预算', '交期要求', '现有供应商', '决策流程']
+
+// 客户画像里可编辑的字段：改了要走「保存」按钮，且自动在时间线里留痕
+const PROFILE_FIELDS = [
+  { key: 'company_handle', label: '店铺/账号名' },
+  { key: 'source_platform', label: '来源平台', type: 'select', options: SOURCE_PLATFORMS },
+  { key: 'country', label: '国家/地区' },
+  { key: 'website', label: '网站' },
+  { key: 'business_type', label: '主营品类' },
+  { key: 'contact_name', label: '联系人' },
+  { key: 'email', label: '邮箱' },
+  { key: 'phone', label: '电话' },
+  { key: 'lead_owner', label: '负责人' },
+]
+
 const blankForm = (currentUser = '陈晨') => ({
   received_at: new Date().toISOString().slice(0, 10),
   source_platform: 'Instagram',
@@ -27,8 +41,14 @@ const blankForm = (currentUser = '陈晨') => ({
   need_discovery: [],
 })
 
+function profileFormFrom(lead) {
+  const form = {}
+  PROFILE_FIELDS.forEach((f) => { form[f.key] = lead[f.key] || '' })
+  return form
+}
+
 export default function InboundView({ state, setState, currentUser = '陈晨', initialSelectedId = null, onNavigate }) {
-  const focusMode = Boolean(initialSelectedId) // 从「全部客户」点进来：只看这一条，不甩一整个列表和新增按钮出来
+  const focusMode = Boolean(initialSelectedId) // 从「全部客户」点进来：只看这一条，不甩出一整个列表和新增按钮
   const [selectedId, setSelectedId] = useState(initialSelectedId || state.inbound_leads[0]?.id)
   const [search, setSearch] = useState('')
   const [showAdd, setShowAdd] = useState(false)
@@ -36,6 +56,8 @@ export default function InboundView({ state, setState, currentUser = '陈晨', i
   const [newNeedType, setNewNeedType] = useState('')
   const [followNote, setFollowNote] = useState('')
   const [followNextAction, setFollowNextAction] = useState('')
+  const [editingProfile, setEditingProfile] = useState(false)
+  const [profileForm, setProfileForm] = useState({})
 
   // 业务员新增选项 → 共享字典 + 前线事件（主管总览可见）
   const register = (field, value) => setState((cur) => registerOption(cur, field, value, currentUser))
@@ -46,27 +68,37 @@ export default function InboundView({ state, setState, currentUser = '陈晨', i
     [state.inbound_leads, search],
   )
   const selected = state.inbound_leads.find((l) => l.id === selectedId) || state.inbound_leads[0]
-  const followLog = useMemo(
-    () => (state.lead_follow_ups || []).filter((f) => f.lead_id === selected?.id).sort((a, b) => (b.created_at || '').localeCompare(a.created_at || '')),
-    [state.lead_follow_ups, selected],
-  )
-  const addFollowUp = () => {
-    const note = followNote.trim()
-    const next = followNextAction.trim()
-    if (!note && !next || !selected) return
-    const entry = { id: `lf_${Date.now()}`, lead_id: selected.id, note, next_action: next, created_by: currentUser, created_at: new Date().toISOString() }
-    setState((current) => ({
-      ...current,
-      lead_follow_ups: [entry, ...(current.lead_follow_ups || [])],
-      // 跟进记录追加的同时，把「下一步动作」同步刷新成最新的一条，方便一眼看到当前该做什么
-      inbound_leads: current.inbound_leads.map((l) => (l.id === selected.id ? { ...l, next_action: next || l.next_action, last_contact: entry.created_at.slice(0, 10) } : l)),
-    }))
-    setFollowNote(''); setFollowNextAction('')
-  }
 
   const updateLead = (id, changes) => setState((current) => ({
     ...current, inbound_leads: current.inbound_leads.map((l) => (l.id === id ? { ...l, ...changes } : l)),
   }))
+  const pushLog = (entry) => setState((current) => ({
+    ...current, lead_follow_ups: [{ id: `lf_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`, lead_id: selected.id, created_by: currentUser, created_at: new Date().toISOString(), note: '', next_action: '', ...entry }, ...(current.lead_follow_ups || [])],
+  }))
+
+  const startEditProfile = () => { setProfileForm(profileFormFrom(selected)); setEditingProfile(true) }
+  const cancelEditProfile = () => setEditingProfile(false)
+  const saveProfile = () => {
+    const changed = PROFILE_FIELDS.filter((f) => (profileForm[f.key] || '') !== (selected[f.key] || ''))
+    if (!changed.length) { setEditingProfile(false); return }
+    const now = new Date().toISOString()
+    const logs = changed.map((f, i) => ({
+      id: `lf_${Date.now()}_${i}`, lead_id: selected.id, kind: 'profile_edit', created_by: currentUser, created_at: now,
+      note: `把「${f.label}」从「${selected[f.key] || '空'}」改成了「${profileForm[f.key] || '空'}」`,
+    }))
+    setState((current) => ({
+      ...current,
+      inbound_leads: current.inbound_leads.map((l) => (l.id === selected.id ? { ...l, ...profileForm } : l)),
+      lead_follow_ups: [...logs, ...(current.lead_follow_ups || [])],
+    }))
+    setEditingProfile(false)
+  }
+  const changeStatus = (newStatus) => {
+    if (!selected || newStatus === selected.inbound_status) return
+    pushLog({ kind: 'status_change', note: `状态从「${LEAD_STATUS_LABELS[selected.inbound_status]}」改成了「${LEAD_STATUS_LABELS[newStatus]}」` })
+    updateLead(selected.id, { inbound_status: newStatus })
+  }
+
   const toggleNeed = (label) => {
     if (!selected) return
     const has = selected.need_discovery?.includes(label)
@@ -91,10 +123,21 @@ export default function InboundView({ state, setState, currentUser = '陈晨', i
     const owner = form.lead_owner.trim() || currentUser
     if (!form.original_message.trim() && !owner.trim()) return
     const id = `il_${Date.now()}`
-    const lead = { id, received_at: form.received_at || new Date().toISOString(), source_platform: form.source_platform, country: form.country, original_message: form.original_message, lead_owner: owner, assigned_by: form.assigned_by.trim() || currentUser, assigned_at: new Date().toISOString(), inbound_status: form.inbound_status, next_action: form.next_action, follow_up: form.follow_up, lost_reason: form.lost_reason, need_discovery: form.need_discovery, company: '', company_handle: '', contact: '', first_reply: null, last_contact: null, follow_up_count: 0, note: '' }
-    const activity = { id: `a_in_${id}`, company_id: null, contact_id: null, flow_type: 'inbound', channel: form.source_platform, kind: 'discovery', replyType: null, sentiment: null, at: lead.assigned_at, round_id: null, note: `Inbound 询盘接入：${form.source_platform}` }
-    setState((current) => ({ ...current, inbound_leads: [lead, ...current.inbound_leads], activities: [...current.activities, activity] }))
+    const lead = { id, received_at: form.received_at || new Date().toISOString(), source_platform: form.source_platform, country: form.country, original_message: form.original_message, lead_owner: owner, assigned_by: form.assigned_by.trim() || currentUser, assigned_at: new Date().toISOString(), inbound_status: form.inbound_status, next_action: form.next_action, follow_up: form.follow_up, lost_reason: form.lost_reason, need_discovery: form.need_discovery, company: '', company_handle: '', contact: '', website: '', business_type: '', contact_name: '', email: '', phone: '', first_reply: null, last_contact: null, follow_up_count: 0, note: '' }
+    setState((current) => ({ ...current, inbound_leads: [lead, ...current.inbound_leads] }))
     setSelectedId(id); setShowAdd(false); setForm(blankForm(currentUser))
+  }
+  const addFollowUp = () => {
+    const note = followNote.trim()
+    const next = followNextAction.trim()
+    if ((!note && !next) || !selected) return
+    const entry = { id: `lf_${Date.now()}`, lead_id: selected.id, kind: 'follow_up', note, next_action: next, created_by: currentUser, created_at: new Date().toISOString() }
+    setState((current) => ({
+      ...current,
+      lead_follow_ups: [entry, ...(current.lead_follow_ups || [])],
+      inbound_leads: current.inbound_leads.map((l) => (l.id === selected.id ? { ...l, next_action: next || l.next_action, last_contact: entry.created_at.slice(0, 10) } : l)),
+    }))
+    setFollowNote(''); setFollowNextAction('')
   }
 
   if (!selected) {
@@ -112,6 +155,13 @@ export default function InboundView({ state, setState, currentUser = '陈晨', i
       </div>
     )
   }
+
+  const followLog = (state.lead_follow_ups || []).filter((f) => f.lead_id === selected.id)
+  const timeline = [
+    { id: 'origin', kind: 'origin', at: selected.assigned_at || selected.received_at, note: selected.original_message || '（没有留下原始留言）', created_by: selected.lead_owner },
+    ...followLog,
+  ].sort((a, b) => (b.at || b.created_at || '').localeCompare(a.at || a.created_at || ''))
+  const displayName = selected.company_handle || extractHandle(selected.company) || selected.contact_name || '未命名询盘'
 
   return (
     <div className="flow-page">
@@ -146,45 +196,53 @@ export default function InboundView({ state, setState, currentUser = '陈晨', i
         <section className="customer-workspace">
           <div className="customer-heading">
             <div>
-              <h1>{selected.company_handle || extractHandle(selected.company) || selected.contact || '未命名询盘'} <small style={{ fontWeight: 400, fontSize: 13, color: 'var(--muted)' }}>· {selected.source_platform} · {selected.country || '国家未填'}</small></h1>
-              <p>原始留言、需求发现、状态与跟进都在这里。</p>
+              <h1>{displayName} <small style={{ fontWeight: 400, fontSize: 13, color: 'var(--muted)' }}>· {selected.source_platform}</small></h1>
+              <p>当前状态、画像信息、完整进展都在这里，改动会留痕。</p>
+            </div>
+            <div className="heading-actions">
+              <select className="status-pill-select" value={selected.inbound_status} onChange={(e) => changeStatus(e.target.value)} aria-label="当前状态">
+                {LEAD_STATUSES.map((s) => <option key={s} value={s}>{LEAD_STATUS_LABELS[s]}</option>)}
+              </select>
             </div>
           </div>
-          <div className="customer-meta">
-            <div className="customer-fields">
-              <div><span>来源平台</span><select value={selected.source_platform} onChange={(e) => updateLead(selected.id, { source_platform: e.target.value })}>{SOURCE_PLATFORMS.map((p) => <option key={p}>{p}</option>)}</select></div>
-              <div><span>国家 / 地区</span><input value={selected.country || ''} onChange={(e) => updateLead(selected.id, { country: e.target.value })} placeholder="例如 澳大利亚" /></div>
-              <div><span>负责人</span><input value={selected.lead_owner || ''} onChange={(e) => updateLead(selected.id, { lead_owner: e.target.value })} placeholder="谁在跟进这个询盘" /></div>
-              <div><span>分配人</span><strong>{selected.assigned_by}</strong></div>
-              <div><span>接入时间</span><strong>{selected.assigned_at?.slice(0, 10)}</strong></div>
-              <div><span>当前状态</span><select value={selected.inbound_status} onChange={(e) => updateLead(selected.id, { inbound_status: e.target.value })}>{LEAD_STATUSES.map((s) => <option key={s} value={s}>{LEAD_STATUS_LABELS[s]}</option>)}</select></div>
-            </div>
-            <label className="fit-note"><span>当前下一步<small>会随最新一条跟进记录自动更新，也可以直接改</small></span><textarea value={selected.next_action || ''} onChange={(e) => updateLead(selected.id, { next_action: e.target.value })} placeholder="例如：发送报价单 / 约视频会议" /></label>
-          </div>
 
-          <section className="contacts-panel">
-            <h2>原始询盘 <small>Original Inquiry · 客户原话，不能编辑，避免误删改</small></h2>
-            <div className="inquiry-box inquiry-readonly">{selected.original_message || <em style={{ color: 'var(--muted)' }}>（这条询盘没有留下原始留言）</em>}</div>
-          </section>
-
-          <section className="contacts-panel">
-            <h2>跟进记录 <small>Follow-up Log · 每次跟进都追加一条，不会覆盖之前的记录</small></h2>
-            <div className="follow-add-row">
-              <textarea value={followNote} onChange={(e) => setFollowNote(e.target.value)} placeholder="这次跟进说了什么 / 客户反馈是什么（选填）" />
-              <input value={followNextAction} onChange={(e) => setFollowNextAction(e.target.value)} placeholder="下一步打算做什么（选填，例如：发报价单）" />
-              <button type="button" className="button primary compact" onClick={addFollowUp}><Plus size={15} />追加一条跟进</button>
+          {/* ① 客户画像 —— 相对稳定的身份信息，改动需要走「保存」并自动留痕 */}
+          <section className="card">
+            <div className="card-head">
+              <h2>客户画像</h2>
+              {!editingProfile ? (
+                <button type="button" className="button outline compact" onClick={startEditProfile}><Pencil size={14} />编辑画像</button>
+              ) : null}
             </div>
-            {followLog.length ? (
-              <div className="daily-feed" style={{ marginTop: 12 }}>
-                {followLog.map((f) => (
-                  <div className="daily-item" key={f.id}>
-                    <div className="daily-date">{(f.created_at || '').slice(0, 10)} · {f.created_by || '未知'}</div>
-                    {f.note ? <div className="daily-result">{f.note}</div> : null}
-                    {f.next_action ? <div className="daily-adjust">下一步：{f.next_action}</div> : null}
-                  </div>
+            {!editingProfile ? (
+              <div className="info-grid">
+                {PROFILE_FIELDS.map((f) => (
+                  <div key={f.key}><span>{f.label}</span><strong>{selected[f.key] || '待补充'}</strong></div>
                 ))}
+                <div><span>接入时间</span><strong>{selected.assigned_at?.slice(0, 10) || '待补充'}</strong></div>
+                <div><span>分配人</span><strong>{selected.assigned_by || '待补充'}</strong></div>
               </div>
-            ) : <p className="contact-empty" style={{ marginTop: 10 }}>还没有跟进记录，跟进一次就在上面追加一条。</p>}
+            ) : (
+              <>
+                <div className="form-grid">
+                  {PROFILE_FIELDS.map((f) => (
+                    <label key={f.key}>{f.label}
+                      {f.type === 'select' ? (
+                        <select value={profileForm[f.key] || ''} onChange={(e) => setProfileForm((p) => ({ ...p, [f.key]: e.target.value }))}>
+                          {f.options.map((o) => <option key={o}>{o}</option>)}
+                        </select>
+                      ) : (
+                        <input value={profileForm[f.key] || ''} onChange={(e) => setProfileForm((p) => ({ ...p, [f.key]: e.target.value }))} />
+                      )}
+                    </label>
+                  ))}
+                </div>
+                <div className="form-actions">
+                  <button type="button" className="button secondary" onClick={cancelEditProfile}>取消</button>
+                  <button type="button" className="button primary" onClick={saveProfile}>保存修改</button>
+                </div>
+              </>
+            )}
           </section>
 
           <section className="contacts-panel"><h2>需求发现 <small>Need Discovery</small></h2><div className="need-grid">
@@ -198,6 +256,42 @@ export default function InboundView({ state, setState, currentUser = '陈晨', i
             <Combobox label="新增需求类型" value={newNeedType} onChange={setNewNeedType} onNewOption={(v) => register('inboundNeedType', v)} options={getOptions(state, 'inboundNeedType')} placeholder="例如：定制贴牌、加急订单" />
             <button type="button" className="button outline compact" onClick={addNeedType}><Plus size={15} />加入</button>
           </div>
+          </section>
+
+          {/* ② 开发进展时间线 —— 原始留言 + 每次跟进 + 每次画像/状态修改，统一按时间倒序 */}
+          <section className="card">
+            <div className="card-head">
+              <h2>开发进展</h2>
+              <span className="current-next-action">当前下一步：{selected.next_action || '还没定'}</span>
+            </div>
+            <div className="timeline-list">
+              {timeline.map((t) => (
+                <div className="timeline-item" key={t.id}>
+                  <div className="timeline-icon">{t.kind === 'origin' ? <MessageSquare size={14} /> : t.kind === 'profile_edit' ? <Pencil size={13} /> : t.kind === 'status_change' ? <RefreshCw size={13} /> : <MessageSquare size={14} />}</div>
+                  <div className="timeline-body">
+                    <div className="timeline-meta">
+                      <span>{(t.at || t.created_at || '').slice(0, 10)}</span>
+                      <span>· {t.created_by || '未知'}</span>
+                      {t.kind === 'origin' ? <span className="badge idle">原始留言</span> : null}
+                      {t.kind === 'profile_edit' ? <span className="badge auto">画像修改</span> : null}
+                      {t.kind === 'status_change' ? <span className="badge human">状态变更</span> : null}
+                    </div>
+                    {t.note ? <div className="timeline-note">{t.note}</div> : null}
+                    {t.next_action ? <div className="timeline-next">下一步：{t.next_action}</div> : null}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* ③ 更新进展 —— 保存后立刻出现在②的最上面，同时刷新「当前下一步」 */}
+          <section className="card">
+            <h2>更新进展</h2>
+            <div className="follow-add-row">
+              <textarea value={followNote} onChange={(e) => setFollowNote(e.target.value)} placeholder="这次跟进说了什么 / 客户反馈是什么（选填）" />
+              <input value={followNextAction} onChange={(e) => setFollowNextAction(e.target.value)} placeholder="下一步打算做什么（选填，例如：发报价单）" />
+              <button type="button" className="button primary compact" onClick={addFollowUp}><Plus size={15} />保存这次更新</button>
+            </div>
           </section>
 
           <div className="customer-meta" style={{ gridTemplateColumns: '1fr 1fr' }}>

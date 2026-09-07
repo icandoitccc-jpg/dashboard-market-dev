@@ -37,10 +37,10 @@ export default function CustomerDetail({ state, setState, prospect, currentUser 
   const availableChannels = prospect.channels.filter((c) => c.available === 'yes')
   const openTasks = state.follow_up_tasks.filter((t) => t.status === 'open' && t.company_id === prospect.id)
 
-  // 该客户的历史触达记录，按日期倒序
+  // 该客户的完整开发进展：触达记录 + 画像/字段修改留痕，统一按时间倒序（不再分裂成互不相关的两块）
   const companyActivities = useMemo(() => {
     return state.activities
-      .filter((a) => a.company_id === prospect.id && a.kind === 'outreach')
+      .filter((a) => a.company_id === prospect.id && (a.kind === 'outreach' || a.kind === 'profile_edit'))
       .sort((a, b) => new Date(b.at) - new Date(a.at))
   }, [state.activities, prospect.id])
 
@@ -50,6 +50,22 @@ export default function CustomerDetail({ state, setState, prospect, currentUser 
     ...current,
     prospects: current.prospects.map((p) => (p.id === prospect.id ? updater(p) : p)),
   }))
+
+  // 画像字段名 → 中文标签，用于生成留痕说明
+  const FIELD_LABELS = { stuckAt: '停滞点', next_follow: '当前下一步', name: '客户名', market: '市场', customerType: '客户类型', sourceMethod: '发现方式', fitNote: '匹配备注' }
+  const pushProfileLog = (changes) => {
+    const now = new Date().toISOString()
+    const entries = Object.entries(changes)
+      .filter(([key, value]) => (value || '') !== (prospect[key] || ''))
+      .map(([key, value], i) => ({
+        id: `a_edit_${Date.now()}_${i}`, company_id: prospect.id, contact_id: null, flow_type: 'outbound',
+        kind: 'profile_edit', channel: null, replyType: null, sentiment: null, at: now, round_id: null,
+        note: `把「${FIELD_LABELS[key] || key}」从「${prospect[key] || '空'}」改成了「${value || '空'}」`,
+      }))
+    if (entries.length) setState((current) => ({ ...current, activities: [...current.activities, ...entries] }))
+  }
+  // 「停滞点」「当前下一步」这类工作状态字段：改了立刻生效，但自动留痕（不需要走单独的保存弹窗）
+  const updateWithLog = (key, value) => { pushProfileLog({ [key]: value }); updateSelected((p) => ({ ...p, [key]: value })) }
 
   const toggleSent = (key) => setRound((cur) => ({
     ...cur, entries: { ...cur.entries, [key]: { sent: !cur.entries[key]?.sent, result: cur.entries[key]?.result || 'none', replyReason: cur.entries[key]?.replyReason || '' } },
@@ -147,7 +163,7 @@ export default function CustomerDetail({ state, setState, prospect, currentUser 
       <div className="customer-heading">
         <div>
           <h1>{prospect.name}</h1>
-          <p>记录已经发出的触达和收到的回复；不计时、不排名，只验证哪条路径有效。</p>
+          <p>当前下一步：{prospect.next_follow || '还没定'}</p>
         </div>
         <div className="heading-actions">
           <button type="button" className="button outline compact" onClick={() => setShowEdit(true)}><Pencil size={15} />编辑客户</button>
@@ -155,7 +171,7 @@ export default function CustomerDetail({ state, setState, prospect, currentUser 
       </div>
 
       <section className="card">
-        <h2>客户信息</h2>
+        <h2>客户画像</h2>
         <div className="info-grid">
           <div><span>客户类型</span><strong>{prospect.customerType || prospect.segment || '待补充'}</strong></div>
           <div><span>市场</span><strong>{prospect.market || '待补充'}</strong></div>
@@ -167,18 +183,21 @@ export default function CustomerDetail({ state, setState, prospect, currentUser 
             <Combobox
               label="停滞点"
               value={prospect.stuckAt || ''}
-              onChange={(v) => updateSelected((p) => ({ ...p, stuckAt: v }))}
+              onChange={(v) => updateWithLog('stuckAt', v)}
               onNewOption={(v) => register('stuckAt', v)}
               options={getOptions(state, 'stuckAt')}
               placeholder="无 / 触达后无回应…"
             />
+          </div>
+          <div className="info-combo"><span>当前下一步<small>打算做什么，改了会自动留痕</small></span>
+            <input value={prospect.next_follow || ''} onChange={(e) => updateWithLog('next_follow', e.target.value)} placeholder="例如：发报价单 / 约视频会议" />
           </div>
           <div><span>首次联系</span><strong>{prospect.first_contact || '待补充'}</strong></div>
           {prospect.region ? <div><span>州/地区</span><strong>{prospect.region}</strong></div> : null}
           {prospect.scale ? <div><span>体量</span><strong>{prospect.scale}</strong></div> : null}
           <div className="span-2"><span>网站</span>{prospect.url ? <a href={prospect.url} target="_blank" rel="noreferrer">{prospect.url} <ExternalLink size={13} /></a> : <span>待补充</span>}</div>
         </div>
-        {prospect.remark ? <label className="fit-note"><span>备注<small>原始记录</small></span><textarea readOnly value={prospect.remark} /></label> : null}
+        {prospect.remark ? <label className="fit-note"><span>备注<small>原始记录，不能改</small></span><div className="inquiry-readonly">{prospect.remark}</div></label> : null}
       </section>
 
       <section className="card">
@@ -206,9 +225,9 @@ export default function CustomerDetail({ state, setState, prospect, currentUser 
         ) : null}
       </section>
 
-      {/* ── 渠道与触达：完全重写 ── */}
+      {/* ── 开发进展：触达记录 + 画像修改，统一时间线 ── */}
       <section className="card">
-        <div className="card-head"><h2>渠道与触达</h2>{!showRoundForm && <button type="button" className="button primary compact" onClick={() => { resetRound(); setShowRoundForm(true) }}><Plus size={15} />记录新触达</button>}</div>
+        <div className="card-head"><h2>开发进展</h2>{!showRoundForm && <button type="button" className="button primary compact" onClick={() => { resetRound(); setShowRoundForm(true) }}><Plus size={15} />记录新触达</button>}</div>
 
         {showRoundForm ? (
           <div className="round-form-v2">
@@ -286,22 +305,35 @@ export default function CustomerDetail({ state, setState, prospect, currentUser 
           </div>
         ) : (
           <>
-            {/* 历史触达时间线 */}
+            {/* 历史触达时间线（含画像修改留痕） */}
             <div className="touch-history">
               {companyActivities.length > 0 ? (
-                companyActivities.map((activity, idx) => (
-                  <div className="touch-record" key={activity.id}>
-                    <div className="touch-meta">
-                      <span className="touch-round">第 {companyActivities.length - idx} 次触达</span>
-                      <span className="touch-date">{activity.at ? activity.at.slice(0, 10) : ''}</span>
-                      <ResultBadge replyType={activity.replyType} sentiment={activity.sentiment} replyReason={activity.reply_reason || activity.replyReason} />
-                    </div>
-                    <div className="touch-detail">
-                      <span className="touch-channel-tag">{activity.channel}</span>
-                      {activity.note ? <span className="touch-note">{activity.note}</span> : null}
-                    </div>
-                  </div>
-                ))
+                (() => {
+                  const outreachOnly = companyActivities.filter((a) => a.kind !== 'profile_edit')
+                  return companyActivities.map((activity) => (
+                    activity.kind === 'profile_edit' ? (
+                      <div className="touch-record" key={activity.id}>
+                        <div className="touch-meta">
+                          <span className="badge auto">画像修改</span>
+                          <span className="touch-date">{activity.at ? activity.at.slice(0, 10) : ''}</span>
+                        </div>
+                        <div className="touch-detail"><span className="touch-note">{activity.note}</span></div>
+                      </div>
+                    ) : (
+                      <div className="touch-record" key={activity.id}>
+                        <div className="touch-meta">
+                          <span className="touch-round">第 {outreachOnly.length - outreachOnly.indexOf(activity)} 次触达</span>
+                          <span className="touch-date">{activity.at ? activity.at.slice(0, 10) : ''}</span>
+                          <ResultBadge replyType={activity.replyType} sentiment={activity.sentiment} replyReason={activity.reply_reason || activity.replyReason} />
+                        </div>
+                        <div className="touch-detail">
+                          <span className="touch-channel-tag">{activity.channel}</span>
+                          {activity.note ? <span className="touch-note">{activity.note}</span> : null}
+                        </div>
+                      </div>
+                    )
+                  ))
+                })()
               ) : (
                 <p className="touch-empty">还没有触达记录。点击上方「记录新触达」开始记录。</p>
               )}
@@ -310,7 +342,11 @@ export default function CustomerDetail({ state, setState, prospect, currentUser 
         )}
       </section>
 
-      {showEdit && <AddCustomerModal prospect={prospect} state={state} onNewOption={register} onClose={() => setShowEdit(false)} onEdit={(id, data) => { updateSelected((p) => ({ ...p, name: data.name, market: data.market, customerType: data.customerType, sourceMethod: data.sourceMethod, fitNote: data.fitNote, channels: p.channels.map((c) => ({ ...c, available: data.availability[c.key] || c.available })) })); setShowEdit(false); setToast('已更新客户信息'); setTimeout(() => setToast(''), 2200) }} />}
+      {showEdit && <AddCustomerModal prospect={prospect} state={state} onNewOption={register} onClose={() => setShowEdit(false)} onEdit={(id, data) => {
+        pushProfileLog({ name: data.name, market: data.market, customerType: data.customerType, sourceMethod: data.sourceMethod, fitNote: data.fitNote })
+        updateSelected((p) => ({ ...p, name: data.name, market: data.market, customerType: data.customerType, sourceMethod: data.sourceMethod, fitNote: data.fitNote, channels: p.channels.map((c) => ({ ...c, available: data.availability[c.key] || c.available })) }))
+        setShowEdit(false); setToast('已更新客户信息，改动已记录在开发进展里'); setTimeout(() => setToast(''), 2600)
+      }} />}
       {toast && <div className="toast">{toast}</div>}
     </section>
   )

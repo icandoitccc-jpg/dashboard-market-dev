@@ -89,8 +89,8 @@ function dailyToRow(d) {
   }
 }
 
-function rowToFollowUpLog(r) { return { ...r } }
-function followUpLogToRow(f) { return { ...f, created_at: emptyToNull(f.created_at) } }
+function rowToFollowUpLog(r) { return { ...r, kind: r.kind || 'follow_up' } }
+function followUpLogToRow(f) { return { ...f, created_at: emptyToNull(f.created_at), kind: f.kind || 'follow_up' } }
 
 // ================= 加载：从各表拉取，拼成 App 内部一直使用的 state 形状 =================
 export async function loadState() {

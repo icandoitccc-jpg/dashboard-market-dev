@@ -102,6 +102,7 @@ export default function InboundView({ state, setState, currentUser = '陈晨', i
   const toggleNeed = (label) => {
     if (!selected) return
     const has = selected.need_discovery?.includes(label)
+    pushLog({ kind: 'profile_edit', note: `${has ? '取消勾选' : '勾选'}了需求发现：${label}` })
     updateLead(selected.id, { need_discovery: has ? selected.need_discovery.filter((x) => x !== label) : [...(selected.need_discovery || []), label] })
   }
   // 需求类型（枚举来自 Inbound 表真实取值，可自定义新增）
@@ -109,6 +110,7 @@ export default function InboundView({ state, setState, currentUser = '陈晨', i
   const toggleNeedType = (label) => {
     if (!selected) return
     const has = selected.need_type?.includes(label)
+    pushLog({ kind: 'profile_edit', note: `${has ? '取消勾选' : '勾选'}了需求类型：${label}` })
     updateLead(selected.id, { need_type: has ? (selected.need_type || []).filter((x) => x !== label) : [...(selected.need_type || []), label] })
   }
   const addNeedType = () => {

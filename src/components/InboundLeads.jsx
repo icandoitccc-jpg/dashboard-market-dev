@@ -28,11 +28,14 @@ const blankForm = (currentUser = '陈晨') => ({
 })
 
 export default function InboundView({ state, setState, currentUser = '陈晨', initialSelectedId = null, onNavigate }) {
+  const focusMode = Boolean(initialSelectedId) // 从「全部客户」点进来：只看这一条，不甩一整个列表和新增按钮出来
   const [selectedId, setSelectedId] = useState(initialSelectedId || state.inbound_leads[0]?.id)
   const [search, setSearch] = useState('')
   const [showAdd, setShowAdd] = useState(false)
   const [form, setForm] = useState(blankForm(currentUser))
   const [newNeedType, setNewNeedType] = useState('')
+  const [followNote, setFollowNote] = useState('')
+  const [followNextAction, setFollowNextAction] = useState('')
 
   // 业务员新增选项 → 共享字典 + 前线事件（主管总览可见）
   const register = (field, value) => setState((cur) => registerOption(cur, field, value, currentUser))
@@ -43,6 +46,23 @@ export default function InboundView({ state, setState, currentUser = '陈晨', i
     [state.inbound_leads, search],
   )
   const selected = state.inbound_leads.find((l) => l.id === selectedId) || state.inbound_leads[0]
+  const followLog = useMemo(
+    () => (state.lead_follow_ups || []).filter((f) => f.lead_id === selected?.id).sort((a, b) => (b.created_at || '').localeCompare(a.created_at || '')),
+    [state.lead_follow_ups, selected],
+  )
+  const addFollowUp = () => {
+    const note = followNote.trim()
+    const next = followNextAction.trim()
+    if (!note && !next || !selected) return
+    const entry = { id: `lf_${Date.now()}`, lead_id: selected.id, note, next_action: next, created_by: currentUser, created_at: new Date().toISOString() }
+    setState((current) => ({
+      ...current,
+      lead_follow_ups: [entry, ...(current.lead_follow_ups || [])],
+      // 跟进记录追加的同时，把「下一步动作」同步刷新成最新的一条，方便一眼看到当前该做什么
+      inbound_leads: current.inbound_leads.map((l) => (l.id === selected.id ? { ...l, next_action: next || l.next_action, last_contact: entry.created_at.slice(0, 10) } : l)),
+    }))
+    setFollowNote(''); setFollowNextAction('')
+  }
 
   const updateLead = (id, changes) => setState((current) => ({
     ...current, inbound_leads: current.inbound_leads.map((l) => (l.id === id ? { ...l, ...changes } : l)),
@@ -83,7 +103,7 @@ export default function InboundView({ state, setState, currentUser = '陈晨', i
         {initialSelectedId && onNavigate ? (
           <button type="button" className="back-link" onClick={() => onNavigate('contacts')}><ArrowLeft size={15} />全部客户</button>
         ) : null}
-        <div className="flow-header"><div><h1>总体 Inbound</h1><p>客户主动发来的询盘（社媒私信、官网表单、邮件等）在这里接入，与 Outbound 平级、互不污染。</p></div></div>
+        <div className="flow-header"><div><h1>总体 Inbound</h1><p>客户主动发来的询盘（社媒私信、官网表单、邮件等）都记在这里，和 Outbound 分开管理，互不影响。</p></div></div>
         <div className="sales-layout">
           <section className="prospect-rail"><div className="rail-heading"><h1>Inbound 询盘</h1><button className="button outline" onClick={() => setShowAdd(true)}><Plus size={17} />接入询盘</button></div><div className="empty-list">还没有 Inbound 询盘记录</div></section>
           <section className="empty-main"><div><h1>从真实询盘开始</h1><p>先记下来源平台和原始留言，再补需求发现与跟进。</p><button className="button primary large" onClick={() => setShowAdd(true)}><Plus size={17} />接入第一个询盘</button></div></section>
@@ -98,26 +118,30 @@ export default function InboundView({ state, setState, currentUser = '陈晨', i
       {initialSelectedId && onNavigate ? (
         <button type="button" className="back-link" onClick={() => onNavigate('contacts')}><ArrowLeft size={15} />全部客户</button>
       ) : null}
-      <div className="flow-header"><div><h1>总体 Inbound</h1><p>客户主动询盘接入、需求发现与转化跟进；事件写入 flow_type=inbound，不污染 Outbound 指标。</p></div></div>
-      <div className="metrics-row">
-        <div className="metric-card blue"><div className="mc-body"><span className="mc-label">总询盘</span><strong className="mc-value">{ib.total}</strong><small className="mc-sub">条</small></div></div>
-        {LEAD_STATUSES.slice(0, 5).map((s) => <div key={s} className={`metric-card ${s === 'Converted' ? 'green' : s === 'Lost' ? 'red' : 'default'}`}><div className="mc-body"><span className="mc-label">{LEAD_STATUS_LABELS[s]}</span><strong className="mc-value">{ib.counts[s]}</strong><small className="mc-sub">条</small></div></div>)}
-      </div>
+      <div className="flow-header"><div><h1>总体 Inbound</h1><p>记录每一条客户主动询盘：从哪里来、聊了什么、跟进到什么程度。</p></div></div>
+      {!focusMode ? (
+        <div className="metrics-row">
+          <div className="metric-card blue"><div className="mc-body"><span className="mc-label">总询盘</span><strong className="mc-value">{ib.total}</strong><small className="mc-sub">条</small></div></div>
+          {LEAD_STATUSES.slice(0, 5).map((s) => <div key={s} className={`metric-card ${s === 'Converted' ? 'green' : s === 'Lost' ? 'red' : 'default'}`}><div className="mc-body"><span className="mc-label">{LEAD_STATUS_LABELS[s]}</span><strong className="mc-value">{ib.counts[s]}</strong><small className="mc-sub">条</small></div></div>)}
+        </div>
+      ) : null}
 
       <div className="sales-layout">
-        <section className="prospect-rail">
-          <div className="rail-heading"><h1>Inbound 询盘</h1><button className="button outline" onClick={() => setShowAdd(true)}><Plus size={17} />接入询盘</button></div>
-          <div className="search-box"><Search size={17} /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="搜索留言 / 负责人 / 来源" /></div>
-          <div className="inbound-summary">{LEAD_STATUSES.map((s) => <span key={s} className={`lead-count status-${s}`}>{LEAD_STATUS_LABELS[s]} {ib.counts[s]}</span>)}</div>
-          <div className="prospect-list">
-            {leads.map((lead) => (
-              <button key={lead.id} className={`prospect-row ${lead.id === selected.id ? 'selected' : ''}`} onClick={() => setSelectedId(lead.id)}>
-                <span><strong>{lead.lead_owner || lead.company_handle || '未填负责人'}</strong><small>{lead.source_platform} · {lead.country}</small><small>{lead.received_at?.slice(0, 10)}</small></span>
-                <span className="row-tail"><span className={`lead-status status-${lead.inbound_status}`}>{LEAD_STATUS_LABELS[lead.inbound_status]}</span><ChevronRight size={16} /></span>
-              </button>
-            ))}
-          </div>
-        </section>
+        {!focusMode ? (
+          <section className="prospect-rail">
+            <div className="rail-heading"><h1>Inbound 询盘</h1><button className="button outline" onClick={() => setShowAdd(true)}><Plus size={17} />接入询盘</button></div>
+            <div className="search-box"><Search size={17} /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="搜索留言 / 负责人 / 来源" /></div>
+            <div className="inbound-summary">{LEAD_STATUSES.map((s) => <span key={s} className={`lead-count status-${s}`}>{LEAD_STATUS_LABELS[s]} {ib.counts[s]}</span>)}</div>
+            <div className="prospect-list">
+              {leads.map((lead) => (
+                <button key={lead.id} className={`prospect-row ${lead.id === selected.id ? 'selected' : ''}`} onClick={() => setSelectedId(lead.id)}>
+                  <span><strong>{lead.lead_owner || lead.company_handle || '未填负责人'}</strong><small>{lead.source_platform} · {lead.country}</small><small>{lead.received_at?.slice(0, 10)}</small></span>
+                  <span className="row-tail"><span className={`lead-status status-${lead.inbound_status}`}>{LEAD_STATUS_LABELS[lead.inbound_status]}</span><ChevronRight size={16} /></span>
+                </button>
+              ))}
+            </div>
+          </section>
+        ) : null}
 
         <section className="customer-workspace">
           <div className="customer-heading">
@@ -135,10 +159,33 @@ export default function InboundView({ state, setState, currentUser = '陈晨', i
               <div><span>接入时间</span><strong>{selected.assigned_at?.slice(0, 10)}</strong></div>
               <div><span>当前状态</span><select value={selected.inbound_status} onChange={(e) => updateLead(selected.id, { inbound_status: e.target.value })}>{LEAD_STATUSES.map((s) => <option key={s} value={s}>{LEAD_STATUS_LABELS[s]}</option>)}</select></div>
             </div>
-            <label className="fit-note"><span>下一步动作<small>选填</small></span><textarea value={selected.next_action || ''} onChange={(e) => updateLead(selected.id, { next_action: e.target.value })} placeholder="例如：发送报价单 / 约视频会议" /></label>
+            <label className="fit-note"><span>当前下一步<small>会随最新一条跟进记录自动更新，也可以直接改</small></span><textarea value={selected.next_action || ''} onChange={(e) => updateLead(selected.id, { next_action: e.target.value })} placeholder="例如：发送报价单 / 约视频会议" /></label>
           </div>
 
-          <section className="contacts-panel"><h2>原始询盘 <small>Original Inquiry</small></h2><textarea className="inquiry-box" value={selected.original_message || ''} onChange={(e) => updateLead(selected.id, { original_message: e.target.value })} placeholder="粘贴客户发来的原始留言" /></section>
+          <section className="contacts-panel">
+            <h2>原始询盘 <small>Original Inquiry · 客户原话，不能编辑，避免误删改</small></h2>
+            <div className="inquiry-box inquiry-readonly">{selected.original_message || <em style={{ color: 'var(--muted)' }}>（这条询盘没有留下原始留言）</em>}</div>
+          </section>
+
+          <section className="contacts-panel">
+            <h2>跟进记录 <small>Follow-up Log · 每次跟进都追加一条，不会覆盖之前的记录</small></h2>
+            <div className="follow-add-row">
+              <textarea value={followNote} onChange={(e) => setFollowNote(e.target.value)} placeholder="这次跟进说了什么 / 客户反馈是什么（选填）" />
+              <input value={followNextAction} onChange={(e) => setFollowNextAction(e.target.value)} placeholder="下一步打算做什么（选填，例如：发报价单）" />
+              <button type="button" className="button primary compact" onClick={addFollowUp}><Plus size={15} />追加一条跟进</button>
+            </div>
+            {followLog.length ? (
+              <div className="daily-feed" style={{ marginTop: 12 }}>
+                {followLog.map((f) => (
+                  <div className="daily-item" key={f.id}>
+                    <div className="daily-date">{(f.created_at || '').slice(0, 10)} · {f.created_by || '未知'}</div>
+                    {f.note ? <div className="daily-result">{f.note}</div> : null}
+                    {f.next_action ? <div className="daily-adjust">下一步：{f.next_action}</div> : null}
+                  </div>
+                ))}
+              </div>
+            ) : <p className="contact-empty" style={{ marginTop: 10 }}>还没有跟进记录，跟进一次就在上面追加一条。</p>}
+          </section>
 
           <section className="contacts-panel"><h2>需求发现 <small>Need Discovery</small></h2><div className="need-grid">
             {NEED_DISCOVERY.map((item) => { const checked = selected.need_discovery?.includes(item); return <button type="button" key={item} className={`need-chip ${checked ? 'on' : ''}`} onClick={() => toggleNeed(item)}><span className="need-check">{checked ? '✓' : ''}</span>{item}</button> })}

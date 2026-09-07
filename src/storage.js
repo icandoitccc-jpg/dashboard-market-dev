@@ -89,9 +89,12 @@ function dailyToRow(d) {
   }
 }
 
+function rowToFollowUpLog(r) { return { ...r } }
+function followUpLogToRow(f) { return { ...f, created_at: emptyToNull(f.created_at) } }
+
 // ================= 加载：从各表拉取，拼成 App 内部一直使用的 state 形状 =================
 export async function loadState() {
-  const [prospects, contacts, activities, followUps, leads, daily, options, events, profiles] = await Promise.all([
+  const [prospects, contacts, activities, followUps, leads, daily, options, events, profiles, leadFollowUps] = await Promise.all([
     supabase.from('prospects').select('*'),
     supabase.from('contacts').select('*'),
     supabase.from('activities').select('*'),
@@ -101,9 +104,10 @@ export async function loadState() {
     supabase.from('custom_options').select('*'),
     supabase.from('frontline_events').select('*').order('created_at', { ascending: false }),
     supabase.from('profiles').select('*'),
+    supabase.from('lead_follow_ups').select('*').order('created_at', { ascending: false }),
   ])
 
-  const firstError = [prospects, contacts, activities, followUps, leads, daily, options, events, profiles]
+  const firstError = [prospects, contacts, activities, followUps, leads, daily, options, events, profiles, leadFollowUps]
     .find((r) => r.error)?.error
   if (firstError) throw firstError
 
@@ -125,6 +129,7 @@ export async function loadState() {
       id: e.id, worker: e.created_by, field: e.field, value: e.value, at: e.created_at,
     })),
     workers: (profiles.data || []).map((p) => ({ id: p.name, name: p.name, role: p.role })),
+    lead_follow_ups: (leadFollowUps.data || []).map(rowToFollowUpLog),
     rounds: [],
   }
 }
@@ -140,6 +145,7 @@ export async function saveState(state) {
   if (state.follow_up_tasks?.length) tasks.push(supabase.from('follow_up_tasks').upsert(state.follow_up_tasks.map(followUpToRow)))
   if (state.inbound_leads?.length) tasks.push(supabase.from('inbound_leads').upsert(state.inbound_leads.map(leadToRow)))
   if (state.daily_rhythm?.length) tasks.push(supabase.from('daily_rhythm').upsert(state.daily_rhythm.map(dailyToRow)))
+  if (state.lead_follow_ups?.length) tasks.push(supabase.from('lead_follow_ups').upsert(state.lead_follow_ups.map(followUpLogToRow)))
 
   const optionRows = []
   Object.entries(state.customOptions || {}).forEach(([field, values]) => {

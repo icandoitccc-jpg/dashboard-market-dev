@@ -578,6 +578,11 @@ select { cursor: pointer; }
 
 /* ── sales layout (rail + workspace) ── */
 .sales-layout { display: grid; grid-template-columns: 290px 1fr; gap: 18px; align-items: start; margin-top: 8px; }
+.focus-layout { display: block; max-width: 760px; margin: 8px auto 0; }
+.section-num { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; background: var(--green-soft, #e6f4ea); color: var(--green, #1a7f37); font-size: 11px; font-weight: 700; margin-right: 4px; }
+.sub-section { margin-top: 16px; padding-top: 14px; border-top: 0.5px dashed var(--border); }
+.sub-section h3 { font-size: 12.5px; margin: 0 0 8px; }
+.sub-section h3 small { font-weight: 400; color: var(--muted); margin-left: 4px; }
 .prospect-rail { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 14px; position: sticky; top: 0; }
 .rail-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
 .rail-heading h1 { font-size: 14px; }

@@ -176,7 +176,7 @@ export default function InboundView({ state, setState, currentUser = '陈晨', i
         </div>
       ) : null}
 
-      <div className="sales-layout">
+      <div className={focusMode ? 'focus-layout' : 'sales-layout'}>
         {!focusMode ? (
           <section className="prospect-rail">
             <div className="rail-heading"><h1>Inbound 询盘</h1><button className="button outline" onClick={() => setShowAdd(true)}><Plus size={17} />接入询盘</button></div>
@@ -206,10 +206,10 @@ export default function InboundView({ state, setState, currentUser = '陈晨', i
             </div>
           </div>
 
-          {/* ① 客户画像 —— 相对稳定的身份信息，改动需要走「保存」并自动留痕 */}
+          {/* ① 客户画像 —— 相对稳定的身份信息 + 需求信息，改身份字段要走「保存」并自动留痕 */}
           <section className="card">
             <div className="card-head">
-              <h2>客户画像</h2>
+              <h2><span className="section-num">①</span> 客户画像</h2>
               {!editingProfile ? (
                 <button type="button" className="button outline compact" onClick={startEditProfile}><Pencil size={14} />编辑画像</button>
               ) : null}
@@ -243,25 +243,30 @@ export default function InboundView({ state, setState, currentUser = '陈晨', i
                 </div>
               </>
             )}
-          </section>
 
-          <section className="contacts-panel"><h2>需求发现 <small>Need Discovery</small></h2><div className="need-grid">
-            {NEED_DISCOVERY.map((item) => { const checked = selected.need_discovery?.includes(item); return <button type="button" key={item} className={`need-chip ${checked ? 'on' : ''}`} onClick={() => toggleNeed(item)}><span className="need-check">{checked ? '✓' : ''}</span>{item}</button> })}
-          </div></section>
+            <div className="sub-section">
+              <h3>需求发现 <small>Need Discovery</small></h3>
+              <div className="need-grid">
+                {NEED_DISCOVERY.map((item) => { const checked = selected.need_discovery?.includes(item); return <button type="button" key={item} className={`need-chip ${checked ? 'on' : ''}`} onClick={() => toggleNeed(item)}><span className="need-check">{checked ? '✓' : ''}</span>{item}</button> })}
+              </div>
+            </div>
 
-          <section className="contacts-panel"><h2>需求类型 <small>客户主动想要什么；列表没有的，输入新增</small></h2><div className="need-grid">
-            {needTypes.map((item) => { const checked = selected.need_type?.includes(item); return <button type="button" key={item} className={`need-chip ${checked ? 'on' : ''}`} onClick={() => toggleNeedType(item)}><span className="need-check">{checked ? '✓' : ''}</span>{item}</button> })}
-          </div>
-          <div className="need-add-row">
-            <Combobox label="新增需求类型" value={newNeedType} onChange={setNewNeedType} onNewOption={(v) => register('inboundNeedType', v)} options={getOptions(state, 'inboundNeedType')} placeholder="例如：定制贴牌、加急订单" />
-            <button type="button" className="button outline compact" onClick={addNeedType}><Plus size={15} />加入</button>
-          </div>
+            <div className="sub-section">
+              <h3>需求类型 <small>客户主动想要什么；列表没有的，输入新增</small></h3>
+              <div className="need-grid">
+                {needTypes.map((item) => { const checked = selected.need_type?.includes(item); return <button type="button" key={item} className={`need-chip ${checked ? 'on' : ''}`} onClick={() => toggleNeedType(item)}><span className="need-check">{checked ? '✓' : ''}</span>{item}</button> })}
+              </div>
+              <div className="need-add-row">
+                <Combobox label="新增需求类型" value={newNeedType} onChange={setNewNeedType} onNewOption={(v) => register('inboundNeedType', v)} options={getOptions(state, 'inboundNeedType')} placeholder="例如：定制贴牌、加急订单" />
+                <button type="button" className="button outline compact" onClick={addNeedType}><Plus size={15} />加入</button>
+              </div>
+            </div>
           </section>
 
           {/* ② 开发进展时间线 —— 原始留言 + 每次跟进 + 每次画像/状态修改，统一按时间倒序 */}
           <section className="card">
             <div className="card-head">
-              <h2>开发进展</h2>
+              <h2><span className="section-num">②</span> 开发进展</h2>
               <span className="current-next-action">当前下一步：{selected.next_action || '还没定'}</span>
             </div>
             <div className="timeline-list">
@@ -286,7 +291,7 @@ export default function InboundView({ state, setState, currentUser = '陈晨', i
 
           {/* ③ 更新进展 —— 保存后立刻出现在②的最上面，同时刷新「当前下一步」 */}
           <section className="card">
-            <h2>更新进展</h2>
+            <h2><span className="section-num">③</span> 更新进展</h2>
             <div className="follow-add-row">
               <textarea value={followNote} onChange={(e) => setFollowNote(e.target.value)} placeholder="这次跟进说了什么 / 客户反馈是什么（选填）" />
               <input value={followNextAction} onChange={(e) => setFollowNextAction(e.target.value)} placeholder="下一步打算做什么（选填，例如：发报价单）" />

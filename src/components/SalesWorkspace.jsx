@@ -9,6 +9,7 @@ import { registerOption } from '../dict'
 // Outbound tab (ownerId set). When ownerId is set, a personal analytics band
 // is shown so the worker sees their own feedback — this is their辅助工具.
 export default function SalesWorkspace({ state, setState, ownerId = null, currentUser = '陈晨', initialSelectedId = null }) {
+  const focusMode = Boolean(initialSelectedId)
   const [selectedId, setSelectedId] = useState(initialSelectedId)
   const [search, setSearch] = useState('')
   const [showAdd, setShowAdd] = useState(false)
@@ -105,7 +106,7 @@ export default function SalesWorkspace({ state, setState, ownerId = null, curren
   }
 
   return (
-    <div className="sales-layout">
+    <div className={focusMode ? 'focus-layout' : 'sales-layout'}>
       {analytics ? (
         <section className="personal-analytics wide">
           <h3><TrendingUp size={16} />我的数据反馈</h3>
@@ -122,18 +123,20 @@ export default function SalesWorkspace({ state, setState, ownerId = null, curren
         </section>
       ) : null}
 
-      <section className="prospect-rail">
-        <div className="rail-heading"><h1>客户列表</h1><span className="rail-count">{prospects.length}</span><button className="button primary compact" onClick={() => setShowAdd(true)}><Plus size={15} />添加</button></div>
-        <div className="search-box"><Search size={17} /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="搜索客户" /></div>
-        <div className="prospect-list">
-          {prospects.map((prospect) => (
-            <button key={prospect.id} className={`prospect-row ${prospect.id === selected.id ? 'selected' : ''}`} onClick={() => setSelectedId(prospect.id)}>
-              <span><strong>{prospect.name}</strong><small>{prospect.market} · {prospect.customerType || prospect.segment || '未分类'}</small><small>{prospect.status || '待触达'}</small></span>
-              <span className="row-tail"><ChevronRight size={16} /></span>
-            </button>
-          ))}
-        </div>
-      </section>
+      {!focusMode ? (
+        <section className="prospect-rail">
+          <div className="rail-heading"><h1>客户列表</h1><span className="rail-count">{prospects.length}</span><button className="button primary compact" onClick={() => setShowAdd(true)}><Plus size={15} />添加</button></div>
+          <div className="search-box"><Search size={17} /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="搜索客户" /></div>
+          <div className="prospect-list">
+            {prospects.map((prospect) => (
+              <button key={prospect.id} className={`prospect-row ${prospect.id === selected.id ? 'selected' : ''}`} onClick={() => setSelectedId(prospect.id)}>
+                <span><strong>{prospect.name}</strong><small>{prospect.market} · {prospect.customerType || prospect.segment || '未分类'}</small><small>{prospect.status || '待触达'}</small></span>
+                <span className="row-tail"><ChevronRight size={16} /></span>
+              </button>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <CustomerDetail state={state} setState={setState} prospect={selected} currentUser={currentUser} />
       {showAdd && <AddCustomerModal state={state} onNewOption={register} onClose={() => setShowAdd(false)} onAdd={addCustomer} />}

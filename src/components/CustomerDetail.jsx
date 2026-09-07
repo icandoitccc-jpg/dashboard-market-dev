@@ -171,7 +171,7 @@ export default function CustomerDetail({ state, setState, prospect, currentUser 
       </div>
 
       <section className="card">
-        <h2>客户画像</h2>
+        <h2><span className="section-num">①</span> 客户画像</h2>
         <div className="info-grid">
           <div><span>客户类型</span><strong>{prospect.customerType || prospect.segment || '待补充'}</strong></div>
           <div><span>市场</span><strong>{prospect.market || '待补充'}</strong></div>
@@ -227,7 +227,7 @@ export default function CustomerDetail({ state, setState, prospect, currentUser 
 
       {/* ── 开发进展：触达记录 + 画像修改，统一时间线 ── */}
       <section className="card">
-        <div className="card-head"><h2>开发进展</h2>{!showRoundForm && <button type="button" className="button primary compact" onClick={() => { resetRound(); setShowRoundForm(true) }}><Plus size={15} />记录新触达</button>}</div>
+        <div className="card-head"><h2><span className="section-num">②</span> 开发进展</h2>{!showRoundForm && <button type="button" className="button primary compact" onClick={() => { resetRound(); setShowRoundForm(true) }}><Plus size={15} />记录新触达</button>}</div>
 
         {showRoundForm ? (
           <div className="round-form-v2">

@@ -60,7 +60,7 @@ function activityToRow(a) {
 function rowToFollowUp(r) { return { ...r } }
 function followUpToRow(t) { return { ...t, created_at: emptyToNull(t.created_at), done_at: emptyToNull(t.done_at) } }
 
-function rowToLead(r) { return { ...r, need_type: r.need_type || [], need_discovery: r.need_discovery || [] } }
+function rowToLead(r) { return { ...r, need_type: r.need_type || [] } }
 function leadToRow(l) {
   return {
     ...l,
@@ -69,7 +69,6 @@ function leadToRow(l) {
     follow_up: emptyToNull(l.follow_up),
     assigned_at: emptyToNull(l.assigned_at),
     need_type: l.need_type || [],
-    need_discovery: Array.isArray(l.need_discovery) ? l.need_discovery : (l.need_discovery ? [l.need_discovery] : []),
   }
 }
 

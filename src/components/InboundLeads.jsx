@@ -12,7 +12,6 @@ function extractHandle(url) {
 }
 
 const SOURCE_PLATFORMS = ['Instagram', 'Facebook', 'LinkedIn', 'Website', 'WhatsApp', 'Email', '其他']
-const NEED_DISCOVERY = ['产品匹配', '采购权/预算', '交期要求', '现有供应商', '决策流程']
 
 // 客户画像里可编辑的字段：改了要走「保存」按钮，且自动在时间线里留痕
 const PROFILE_FIELDS = [
@@ -25,6 +24,7 @@ const PROFILE_FIELDS = [
   { key: 'email', label: '邮箱' },
   { key: 'phone', label: '电话' },
   { key: 'lead_owner', label: '负责人' },
+  { key: 'need_discovery_text', label: '需求发现', type: 'textarea', hint: '客户的真实情况和需求，自由记录（不是打钩清单）' },
 ]
 
 const blankForm = (currentUser = '陈晨') => ({
@@ -38,7 +38,7 @@ const blankForm = (currentUser = '陈晨') => ({
   next_action: '',
   follow_up: '',
   lost_reason: '',
-  need_discovery: [],
+  need_discovery_text: '',
 })
 
 function profileFormFrom(lead) {
@@ -56,6 +56,7 @@ export default function InboundView({ state, setState, currentUser = '陈晨', i
   const [newNeedType, setNewNeedType] = useState('')
   const [followNote, setFollowNote] = useState('')
   const [followNextAction, setFollowNextAction] = useState('')
+  const [followUpDate, setFollowUpDate] = useState('')
   const [editingProfile, setEditingProfile] = useState(false)
   const [profileForm, setProfileForm] = useState({})
 
@@ -99,12 +100,6 @@ export default function InboundView({ state, setState, currentUser = '陈晨', i
     updateLead(selected.id, { inbound_status: newStatus })
   }
 
-  const toggleNeed = (label) => {
-    if (!selected) return
-    const has = selected.need_discovery?.includes(label)
-    pushLog({ kind: 'profile_edit', note: `${has ? '取消勾选' : '勾选'}了需求发现：${label}` })
-    updateLead(selected.id, { need_discovery: has ? selected.need_discovery.filter((x) => x !== label) : [...(selected.need_discovery || []), label] })
-  }
   // 需求类型（枚举来自 Inbound 表真实取值，可自定义新增）
   const needTypes = useMemo(() => [...new Set([...getOptions(state, 'inboundNeedType'), ...(selected?.need_type || [])])], [state, selected])
   const toggleNeedType = (label) => {
@@ -125,21 +120,21 @@ export default function InboundView({ state, setState, currentUser = '陈晨', i
     const owner = form.lead_owner.trim() || currentUser
     if (!form.original_message.trim() && !owner.trim()) return
     const id = `il_${Date.now()}`
-    const lead = { id, received_at: form.received_at || new Date().toISOString(), source_platform: form.source_platform, country: form.country, original_message: form.original_message, lead_owner: owner, assigned_by: form.assigned_by.trim() || currentUser, assigned_at: new Date().toISOString(), inbound_status: form.inbound_status, next_action: form.next_action, follow_up: form.follow_up, lost_reason: form.lost_reason, need_discovery: form.need_discovery, company: '', company_handle: '', contact: '', website: '', business_type: '', contact_name: '', email: '', phone: '', first_reply: null, last_contact: null, follow_up_count: 0, note: '' }
+    const lead = { id, received_at: form.received_at || new Date().toISOString(), source_platform: form.source_platform, country: form.country, original_message: form.original_message, lead_owner: owner, assigned_by: form.assigned_by.trim() || currentUser, assigned_at: new Date().toISOString(), inbound_status: form.inbound_status, next_action: form.next_action, follow_up: form.follow_up, lost_reason: form.lost_reason, need_discovery_text: form.need_discovery_text, company: '', company_handle: '', contact: '', website: '', business_type: '', contact_name: '', email: '', phone: '', first_reply: null, last_contact: null, follow_up_count: 0, note: '' }
     setState((current) => ({ ...current, inbound_leads: [lead, ...current.inbound_leads] }))
     setSelectedId(id); setShowAdd(false); setForm(blankForm(currentUser))
   }
   const addFollowUp = () => {
     const note = followNote.trim()
     const next = followNextAction.trim()
-    if ((!note && !next) || !selected) return
+    if ((!note && !next && !followUpDate) || !selected) return
     const entry = { id: `lf_${Date.now()}`, lead_id: selected.id, kind: 'follow_up', note, next_action: next, created_by: currentUser, created_at: new Date().toISOString() }
     setState((current) => ({
       ...current,
       lead_follow_ups: [entry, ...(current.lead_follow_ups || [])],
-      inbound_leads: current.inbound_leads.map((l) => (l.id === selected.id ? { ...l, next_action: next || l.next_action, last_contact: entry.created_at.slice(0, 10) } : l)),
+      inbound_leads: current.inbound_leads.map((l) => (l.id === selected.id ? { ...l, next_action: next || l.next_action, last_contact: entry.created_at.slice(0, 10), follow_up: followUpDate || l.follow_up } : l)),
     }))
-    setFollowNote(''); setFollowNextAction('')
+    setFollowNote(''); setFollowNextAction(''); setFollowUpDate('')
   }
 
   if (!selected) {
@@ -218,16 +213,22 @@ export default function InboundView({ state, setState, currentUser = '陈晨', i
             </div>
             {!editingProfile ? (
               <div className="info-grid">
-                {PROFILE_FIELDS.map((f) => (
+                {PROFILE_FIELDS.filter((f) => f.type !== 'textarea').map((f) => (
                   <div key={f.key}><span>{f.label}</span><strong>{selected[f.key] || '待补充'}</strong></div>
                 ))}
                 <div><span>接入时间</span><strong>{selected.assigned_at?.slice(0, 10) || '待补充'}</strong></div>
                 <div><span>分配人</span><strong>{selected.assigned_by || '待补充'}</strong></div>
+                {PROFILE_FIELDS.filter((f) => f.type === 'textarea').map((f) => (
+                  <div key={f.key} className="span-3">
+                    <span>{f.label}{f.hint ? <small style={{ marginLeft: 6, fontWeight: 400 }}>{f.hint}</small> : null}</span>
+                    <div className="inquiry-readonly" style={{ marginTop: 4 }}>{selected[f.key] || '待补充'}</div>
+                  </div>
+                ))}
               </div>
             ) : (
               <>
                 <div className="form-grid">
-                  {PROFILE_FIELDS.map((f) => (
+                  {PROFILE_FIELDS.filter((f) => f.type !== 'textarea').map((f) => (
                     <label key={f.key}>{f.label}
                       {f.type === 'select' ? (
                         <select value={profileForm[f.key] || ''} onChange={(e) => setProfileForm((p) => ({ ...p, [f.key]: e.target.value }))}>
@@ -238,6 +239,11 @@ export default function InboundView({ state, setState, currentUser = '陈晨', i
                       )}
                     </label>
                   ))}
+                  {PROFILE_FIELDS.filter((f) => f.type === 'textarea').map((f) => (
+                    <label key={f.key} className="full">{f.label}{f.hint ? <small>{f.hint}</small> : null}
+                      <textarea value={profileForm[f.key] || ''} onChange={(e) => setProfileForm((p) => ({ ...p, [f.key]: e.target.value }))} />
+                    </label>
+                  ))}
                 </div>
                 <div className="form-actions">
                   <button type="button" className="button secondary" onClick={cancelEditProfile}>取消</button>
@@ -245,13 +251,6 @@ export default function InboundView({ state, setState, currentUser = '陈晨', i
                 </div>
               </>
             )}
-
-            <div className="sub-section">
-              <h3>需求发现 <small>Need Discovery</small></h3>
-              <div className="need-grid">
-                {NEED_DISCOVERY.map((item) => { const checked = selected.need_discovery?.includes(item); return <button type="button" key={item} className={`need-chip ${checked ? 'on' : ''}`} onClick={() => toggleNeed(item)}><span className="need-check">{checked ? '✓' : ''}</span>{item}</button> })}
-              </div>
-            </div>
 
             <div className="sub-section">
               <h3>需求类型 <small>客户主动想要什么；列表没有的，输入新增</small></h3>
@@ -297,16 +296,16 @@ export default function InboundView({ state, setState, currentUser = '陈晨', i
             <div className="follow-add-row">
               <textarea value={followNote} onChange={(e) => setFollowNote(e.target.value)} placeholder="这次跟进说了什么 / 客户反馈是什么（选填）" />
               <input value={followNextAction} onChange={(e) => setFollowNextAction(e.target.value)} placeholder="下一步打算做什么（选填，例如：发报价单）" />
+              <label className="follow-date-inline">下次跟进日期（选填）<input type="date" value={followUpDate} onChange={(e) => setFollowUpDate(e.target.value)} /></label>
               <button type="button" className="button primary compact" onClick={addFollowUp}><Plus size={15} />保存这次更新</button>
             </div>
           </section>
 
-          <div className="customer-meta" style={{ gridTemplateColumns: '1fr 1fr' }}>
-            <div className="customer-fields"><div><span>跟进日期</span><input type="date" value={selected.follow_up || ''} onChange={(e) => updateLead(selected.id, { follow_up: e.target.value })} /></div></div>
-            {(selected.inbound_status === 'Stalled' || selected.inbound_status === 'Lost') ? (
+          {(selected.inbound_status === 'Stalled' || selected.inbound_status === 'Lost') ? (
+            <div className="customer-meta" style={{ gridTemplateColumns: '1fr' }}>
               <div className="customer-fields"><div><span>{selected.inbound_status === 'Lost' ? '流失原因' : '停滞原因'}</span><input value={selected.lost_reason || ''} onChange={(e) => updateLead(selected.id, { lost_reason: e.target.value })} placeholder="例如：价格高于预期" /></div></div>
-            ) : null}
-          </div>
+            </div>
+          ) : null}
         </section>
         {showAdd && <LeadModal form={form} setForm={setForm} onClose={() => setShowAdd(false)} onAdd={addLead} />}
       </div>

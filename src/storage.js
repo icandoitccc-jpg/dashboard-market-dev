@@ -167,6 +167,10 @@ export async function saveState(state) {
   }
 }
 
+export async function deleteFollowUpLog(id) {
+  return supabase.from('lead_follow_ups').delete().eq('id', id)
+}
+
 // "当前登录人" 现在由 Supabase Auth 会话决定，这里只保留一个断网兜底显示用的缓存。
 export function loadCurrentUser() {
   try { return localStorage.getItem(USER_KEY) || '' } catch { return '' }

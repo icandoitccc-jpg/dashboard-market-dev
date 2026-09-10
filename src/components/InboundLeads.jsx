@@ -3,6 +3,7 @@ import { ChevronRight, Plus, Search, ArrowLeft, Pencil, MessageSquare, RefreshCw
 import { computeInbound, LEAD_STATUS_LABELS, LEAD_STATUSES } from '../metrics'
 import Combobox from './Combobox'
 import { getOptions, registerOption } from '../dict'
+import { deleteFollowUpLog } from '../storage'
 
 // 从社媒主页链接里提取可读用户名：https://www.instagram.com/icebathusa/ -> icebathusa
 function extractHandle(url) {
@@ -153,6 +154,12 @@ export default function InboundView({ state, setState, currentUser = '陈晨', i
       ...current,
       lead_follow_ups: (current.lead_follow_ups || []).map((f) => (f.id === editingLogId ? { ...f, note: editLogForm.note, next_action: editLogForm.next_action, updated_at: now, updated_by: currentUser } : f)),
     }))
+    setEditingLogId(null)
+  }
+  const deleteLog = (id) => {
+    if (!window.confirm('确定删除这条跟进记录吗？删除后无法恢复。')) return
+    setState((current) => ({ ...current, lead_follow_ups: (current.lead_follow_ups || []).filter((f) => f.id !== id) }))
+    deleteFollowUpLog(id) // 直接同步删库，避免刷新后又出现（整表 upsert 不会主动删远端数据）
     setEditingLogId(null)
   }
 
@@ -315,6 +322,7 @@ export default function InboundView({ state, setState, currentUser = '陈晨', i
                         <textarea value={editLogForm.note} onChange={(e) => setEditLogForm((f) => ({ ...f, note: e.target.value }))} placeholder="这次跟进说了什么" />
                         <input value={editLogForm.next_action} onChange={(e) => setEditLogForm((f) => ({ ...f, next_action: e.target.value }))} placeholder="下一步打算做什么" />
                         <div className="form-actions">
+                          <button type="button" className="button danger-text" onClick={() => deleteLog(t.id)}>删除这条记录</button>
                           <button type="button" className="button secondary" onClick={cancelEditLog}>取消</button>
                           <button type="button" className="button primary compact" onClick={saveEditLog}>保存修改</button>
                         </div>

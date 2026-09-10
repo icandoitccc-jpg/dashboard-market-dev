@@ -735,6 +735,7 @@ select { cursor: pointer; }
 .need-grid { display: flex; flex-wrap: wrap; gap: 8px; }
 .need-chip { display: inline-flex; align-items: center; gap: 5px; border: 0.5px solid var(--border); border-radius: 16px; padding: 5px 12px; font-size: 12px; color: var(--text-2); background: var(--surface); }
 .need-chip.on { background: var(--green-soft); border-color: var(--green); color: var(--green); }
+.need-chip.readonly { background: var(--surface-2, rgba(0,0,0,0.03)); cursor: default; }
 .need-check { font-size: 11px; }
 
 /* modal */

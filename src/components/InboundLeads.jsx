@@ -24,7 +24,7 @@ const PROFILE_FIELDS = [
   { key: 'email', label: '邮箱' },
   { key: 'phone', label: '电话' },
   { key: 'lead_owner', label: '负责人' },
-  { key: 'need_discovery_text', label: '需求发现', type: 'textarea', hint: '客户的真实情况和需求，自由记录（不是打钩清单）' },
+  { key: 'need_discovery_text', label: '需求发现', type: 'textarea' },
 ]
 
 const blankForm = (currentUser = '陈晨') => ({
@@ -44,6 +44,7 @@ const blankForm = (currentUser = '陈晨') => ({
 function profileFormFrom(lead) {
   const form = {}
   PROFILE_FIELDS.forEach((f) => { form[f.key] = lead[f.key] || '' })
+  form.need_type = [...(lead.need_type || [])]
   return form
 }
 
@@ -56,7 +57,6 @@ export default function InboundView({ state, setState, currentUser = '陈晨', i
   const [newNeedType, setNewNeedType] = useState('')
   const [followNote, setFollowNote] = useState('')
   const [followNextAction, setFollowNextAction] = useState('')
-  const [followUpDate, setFollowUpDate] = useState('')
   const [editingProfile, setEditingProfile] = useState(false)
   const [profileForm, setProfileForm] = useState({})
 
@@ -79,14 +79,33 @@ export default function InboundView({ state, setState, currentUser = '陈晨', i
 
   const startEditProfile = () => { setProfileForm(profileFormFrom(selected)); setEditingProfile(true) }
   const cancelEditProfile = () => setEditingProfile(false)
+  const toggleDraftNeedType = (label) => setProfileForm((p) => ({
+    ...p, need_type: p.need_type.includes(label) ? p.need_type.filter((x) => x !== label) : [...p.need_type, label],
+  }))
+  const addDraftNeedType = () => {
+    const v = newNeedType.trim()
+    if (!v) return
+    if (!profileForm.need_type.includes(v)) toggleDraftNeedType(v)
+    if (!getOptions(state, 'inboundNeedType').includes(v)) register('inboundNeedType', v)
+    setNewNeedType('')
+  }
   const saveProfile = () => {
     const changed = PROFILE_FIELDS.filter((f) => (profileForm[f.key] || '') !== (selected[f.key] || ''))
-    if (!changed.length) { setEditingProfile(false); return }
+    const oldTypes = selected.need_type || []
+    const newTypes = profileForm.need_type || []
+    const typesChanged = oldTypes.length !== newTypes.length || oldTypes.some((t) => !newTypes.includes(t))
+    if (!changed.length && !typesChanged) { setEditingProfile(false); return }
     const now = new Date().toISOString()
     const logs = changed.map((f, i) => ({
       id: `lf_${Date.now()}_${i}`, lead_id: selected.id, kind: 'profile_edit', created_by: currentUser, created_at: now,
       note: `把「${f.label}」从「${selected[f.key] || '空'}」改成了「${profileForm[f.key] || '空'}」`,
     }))
+    if (typesChanged) {
+      logs.push({
+        id: `lf_${Date.now()}_type`, lead_id: selected.id, kind: 'profile_edit', created_by: currentUser, created_at: now,
+        note: `把「需求类型」改成了：${newTypes.length ? newTypes.join('、') : '（空）'}`,
+      })
+    }
     setState((current) => ({
       ...current,
       inbound_leads: current.inbound_leads.map((l) => (l.id === selected.id ? { ...l, ...profileForm } : l)),
@@ -102,19 +121,6 @@ export default function InboundView({ state, setState, currentUser = '陈晨', i
 
   // 需求类型（枚举来自 Inbound 表真实取值，可自定义新增）
   const needTypes = useMemo(() => [...new Set([...getOptions(state, 'inboundNeedType'), ...(selected?.need_type || [])])], [state, selected])
-  const toggleNeedType = (label) => {
-    if (!selected) return
-    const has = selected.need_type?.includes(label)
-    pushLog({ kind: 'profile_edit', note: `${has ? '取消勾选' : '勾选'}了需求类型：${label}` })
-    updateLead(selected.id, { need_type: has ? (selected.need_type || []).filter((x) => x !== label) : [...(selected.need_type || []), label] })
-  }
-  const addNeedType = () => {
-    const v = newNeedType.trim()
-    if (!v || !selected) return
-    if (!(selected.need_type || []).includes(v)) toggleNeedType(v)
-    if (!getOptions(state, 'inboundNeedType').includes(v)) register('inboundNeedType', v)
-    setNewNeedType('')
-  }
   const addLead = () => {
     // 归属原则：谁录入（当前操作员），询盘就归谁；负责人字段可在详情页改。
     const owner = form.lead_owner.trim() || currentUser
@@ -127,14 +133,27 @@ export default function InboundView({ state, setState, currentUser = '陈晨', i
   const addFollowUp = () => {
     const note = followNote.trim()
     const next = followNextAction.trim()
-    if ((!note && !next && !followUpDate) || !selected) return
+    if ((!note && !next) || !selected) return
+    // 日期自动记成保存的那一刻，不需要手动挑日期
     const entry = { id: `lf_${Date.now()}`, lead_id: selected.id, kind: 'follow_up', note, next_action: next, created_by: currentUser, created_at: new Date().toISOString() }
     setState((current) => ({
       ...current,
       lead_follow_ups: [entry, ...(current.lead_follow_ups || [])],
-      inbound_leads: current.inbound_leads.map((l) => (l.id === selected.id ? { ...l, next_action: next || l.next_action, last_contact: entry.created_at.slice(0, 10), follow_up: followUpDate || l.follow_up } : l)),
+      inbound_leads: current.inbound_leads.map((l) => (l.id === selected.id ? { ...l, next_action: next || l.next_action, last_contact: entry.created_at.slice(0, 10) } : l)),
     }))
-    setFollowNote(''); setFollowNextAction(''); setFollowUpDate('')
+    setFollowNote(''); setFollowNextAction('')
+  }
+  const [editingLogId, setEditingLogId] = useState(null)
+  const [editLogForm, setEditLogForm] = useState({ note: '', next_action: '' })
+  const startEditLog = (entry) => { setEditingLogId(entry.id); setEditLogForm({ note: entry.note || '', next_action: entry.next_action || '' }) }
+  const cancelEditLog = () => setEditingLogId(null)
+  const saveEditLog = () => {
+    const now = new Date().toISOString()
+    setState((current) => ({
+      ...current,
+      lead_follow_ups: (current.lead_follow_ups || []).map((f) => (f.id === editingLogId ? { ...f, note: editLogForm.note, next_action: editLogForm.next_action, updated_at: now, updated_by: currentUser } : f)),
+    }))
+    setEditingLogId(null)
   }
 
   if (!selected) {
@@ -220,10 +239,16 @@ export default function InboundView({ state, setState, currentUser = '陈晨', i
                 <div><span>分配人</span><strong>{selected.assigned_by || '待补充'}</strong></div>
                 {PROFILE_FIELDS.filter((f) => f.type === 'textarea').map((f) => (
                   <div key={f.key} className="span-3">
-                    <span>{f.label}{f.hint ? <small style={{ marginLeft: 6, fontWeight: 400 }}>{f.hint}</small> : null}</span>
+                    <span>{f.label}</span>
                     <div className="inquiry-readonly" style={{ marginTop: 4 }}>{selected[f.key] || '待补充'}</div>
                   </div>
                 ))}
+                <div className="span-3">
+                  <span>需求类型</span>
+                  <div className="need-grid" style={{ marginTop: 4 }}>
+                    {(selected.need_type || []).length ? selected.need_type.map((item) => <span key={item} className="need-chip readonly">{item}</span>) : <span style={{ fontSize: 12.5, color: 'var(--muted)' }}>待补充</span>}
+                  </div>
+                </div>
               </div>
             ) : (
               <>
@@ -240,10 +265,20 @@ export default function InboundView({ state, setState, currentUser = '陈晨', i
                     </label>
                   ))}
                   {PROFILE_FIELDS.filter((f) => f.type === 'textarea').map((f) => (
-                    <label key={f.key} className="full">{f.label}{f.hint ? <small>{f.hint}</small> : null}
+                    <label key={f.key} className="full">{f.label}
                       <textarea value={profileForm[f.key] || ''} onChange={(e) => setProfileForm((p) => ({ ...p, [f.key]: e.target.value }))} />
                     </label>
                   ))}
+                  <div className="full">
+                    <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>需求类型<small style={{ marginLeft: 6 }}>客户主动想要什么；列表没有的，输入新增</small></span>
+                    <div className="need-grid" style={{ marginTop: 6 }}>
+                      {needTypes.map((item) => { const checked = profileForm.need_type?.includes(item); return <button type="button" key={item} className={`need-chip ${checked ? 'on' : ''}`} onClick={() => toggleDraftNeedType(item)}><span className="need-check">{checked ? '✓' : ''}</span>{item}</button> })}
+                    </div>
+                    <div className="need-add-row">
+                      <Combobox label="新增需求类型" value={newNeedType} onChange={setNewNeedType} onNewOption={(v) => register('inboundNeedType', v)} options={getOptions(state, 'inboundNeedType')} placeholder="例如：定制贴牌、加急订单" />
+                      <button type="button" className="button outline compact" onClick={addDraftNeedType}><Plus size={15} />加入</button>
+                    </div>
+                  </div>
                 </div>
                 <div className="form-actions">
                   <button type="button" className="button secondary" onClick={cancelEditProfile}>取消</button>
@@ -251,17 +286,6 @@ export default function InboundView({ state, setState, currentUser = '陈晨', i
                 </div>
               </>
             )}
-
-            <div className="sub-section">
-              <h3>需求类型 <small>客户主动想要什么；列表没有的，输入新增</small></h3>
-              <div className="need-grid">
-                {needTypes.map((item) => { const checked = selected.need_type?.includes(item); return <button type="button" key={item} className={`need-chip ${checked ? 'on' : ''}`} onClick={() => toggleNeedType(item)}><span className="need-check">{checked ? '✓' : ''}</span>{item}</button> })}
-              </div>
-              <div className="need-add-row">
-                <Combobox label="新增需求类型" value={newNeedType} onChange={setNewNeedType} onNewOption={(v) => register('inboundNeedType', v)} options={getOptions(state, 'inboundNeedType')} placeholder="例如：定制贴牌、加急订单" />
-                <button type="button" className="button outline compact" onClick={addNeedType}><Plus size={15} />加入</button>
-              </div>
-            </div>
           </section>
 
           {/* ② 开发进展时间线 —— 原始留言 + 每次跟进 + 每次画像/状态修改，统一按时间倒序 */}
@@ -281,9 +305,26 @@ export default function InboundView({ state, setState, currentUser = '陈晨', i
                       {t.kind === 'origin' ? <span className="badge idle">原始留言</span> : null}
                       {t.kind === 'profile_edit' ? <span className="badge auto">画像修改</span> : null}
                       {t.kind === 'status_change' ? <span className="badge human">状态变更</span> : null}
+                      {t.updated_at ? <span className="badge idle">已修改</span> : null}
+                      {t.kind === 'follow_up' && editingLogId !== t.id ? (
+                        <button type="button" className="icon-button small" onClick={() => startEditLog(t)} aria-label="编辑这条跟进记录"><Pencil size={12} /></button>
+                      ) : null}
                     </div>
-                    {t.note ? <div className="timeline-note">{t.note}</div> : null}
-                    {t.next_action ? <div className="timeline-next">下一步：{t.next_action}</div> : null}
+                    {editingLogId === t.id ? (
+                      <div className="follow-add-row" style={{ marginTop: 6 }}>
+                        <textarea value={editLogForm.note} onChange={(e) => setEditLogForm((f) => ({ ...f, note: e.target.value }))} placeholder="这次跟进说了什么" />
+                        <input value={editLogForm.next_action} onChange={(e) => setEditLogForm((f) => ({ ...f, next_action: e.target.value }))} placeholder="下一步打算做什么" />
+                        <div className="form-actions">
+                          <button type="button" className="button secondary" onClick={cancelEditLog}>取消</button>
+                          <button type="button" className="button primary compact" onClick={saveEditLog}>保存修改</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        {t.note ? <div className="timeline-note">{t.note}</div> : null}
+                        {t.next_action ? <div className="timeline-next">下一步：{t.next_action}</div> : null}
+                      </>
+                    )}
                   </div>
                 </div>
               ))}
@@ -296,7 +337,6 @@ export default function InboundView({ state, setState, currentUser = '陈晨', i
             <div className="follow-add-row">
               <textarea value={followNote} onChange={(e) => setFollowNote(e.target.value)} placeholder="这次跟进说了什么 / 客户反馈是什么（选填）" />
               <input value={followNextAction} onChange={(e) => setFollowNextAction(e.target.value)} placeholder="下一步打算做什么（选填，例如：发报价单）" />
-              <label className="follow-date-inline">下次跟进日期（选填）<input type="date" value={followUpDate} onChange={(e) => setFollowUpDate(e.target.value)} /></label>
               <button type="button" className="button primary compact" onClick={addFollowUp}><Plus size={15} />保存这次更新</button>
             </div>
           </section>
